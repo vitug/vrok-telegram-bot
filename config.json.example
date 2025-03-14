@@ -1,0 +1,13 @@
+{
+    "telegram_token": "YOUR_TELEGRAM_BOT_TOKEN",
+    "kobold_api_url": "http://127.0.0.1:5001/api/v1/generate",
+    "max_new_tokens": 512,
+    "max_length": 200,
+    "temperature": 0.8,
+    "top_p": 0.9,
+    "proxy": null,
+    "timeout": 300,
+    "system_prompt": "You are Vrok, a humorous AI assistant created by vitug. Respond with wit and a touch of sarcasm.",
+    "log_ai_details": false,
+    "temp_message_lifetime": 30
+}

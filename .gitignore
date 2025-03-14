@@ -1,0 +1,6 @@
+config.json
+context.db
+bot.log
+ai_details.log
+__pycache__/
+*.pyc
