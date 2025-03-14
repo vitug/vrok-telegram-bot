@@ -6,7 +6,7 @@ Vrok is a humorous AI assistant integrated with Telegram, powered by the Kobold 
 - Interactive chat with a customizable AI character (default: Vrok).
 - Context persistence across messages.
 - Optional translation of user queries (RU -> EN) and AI responses (EN -> RU).
-- Customizable response length with `Ï‰XXX`, `mlXXX`, or `mdXXX` (e.g., `Ï‰300` for 300 tokens, max 512).
+- Customizable response length with `–º–¥XXX`, `mlXXX`, or `mdXXX` (e.g., `–º–¥300` for 300 tokens, max 512).
 - Detailed logging for debugging and development.
 
 ### 1. Install dependencies:
@@ -43,7 +43,7 @@ Attribution-NonCommercial 4.0 International
 
 By exercising the Licensed Rights (defined below), You accept and agree to be bound by the terms and conditions of this Creative Commons Attribution-NonCommercial 4.0 International Public License ("Public License"). To the extent this Public License may be interpreted as a contract, You are granted the Licensed Rights in consideration of Your acceptance of these terms and conditions, and the Licensor grants You such rights in consideration of benefits the Licensor receives from making the Licensed Material available under these terms and conditions.
 
-Section 1 ñ Definitions.
+Section 1 ‚Äì Definitions.
 
 a. Adapted Material means material subject to Copyright and Similar Rights that is derived from or based upon the Licensed Material and in which the Licensed Material is translated, altered, arranged, transformed, or otherwise modified in a manner requiring permission under the Copyright and Similar Rights held by the Licensor. For purposes of this Public License, where the Licensed Material is a musical work, performance, or sound recording, Adapted Material includes any synchronization of the Licensed Material with a moving image.
 
@@ -67,7 +67,7 @@ j. Sui Generis Database Rights means rights other than copyright resulting from 
 
 k. You means the individual or entity exercising the Licensed Rights under this Public License. Your has a corresponding meaning.
 
-Section 2 ñ Scope.
+Section 2 ‚Äì Scope.
 
 a. License grant.
 
@@ -82,7 +82,7 @@ a. License grant.
      4. Media and formats; technical modifications allowed. The Licensor authorizes You to exercise the Licensed Rights in all media and formats whether now known or hereafter created, and to make technical modifications necessary to do so. The Licensor waives and/or agrees not to assert any right or authority to forbid You from making technical modifications necessary to exercise the Licensed Rights, including technical modifications necessary to circumvent Effective Technological Measures. For purposes of this Public License, simply making modifications authorized by this Section 2(a)(4) never produces Adapted Material.
 
      5. Downstream recipients.
-          a. Offer from the Licensor ñ Licensed Material. Every recipient of the Licensed Material automatically receives an offer from the Licensor to exercise the Licensed Rights under the terms and conditions of this Public License.
+          a. Offer from the Licensor ‚Äì Licensed Material. Every recipient of the Licensed Material automatically receives an offer from the Licensor to exercise the Licensed Rights under the terms and conditions of this Public License.
           b. No downstream restrictions. You may not offer or impose any additional or different terms or conditions on, or apply any Effective Technological Measures to, the Licensed Material if doing so restricts exercise of the Licensed Rights by any recipient of the Licensed Material.
 
      6. No endorsement. Nothing in this Public License constitutes or may be construed as permission to assert or imply that You are, or that Your use of the Licensed Material is, connected with, or sponsored, endorsed, or granted official status by, the Licensor or others designated to receive attribution as provided in Section 3(a)(1)(A)(i).
@@ -95,7 +95,7 @@ b. Other rights.
 
      3. To the extent possible, the Licensor waives any right to collect royalties from You for the exercise of the Licensed Rights, whether directly or through a collecting society under any voluntary or waivable statutory or compulsory licensing scheme. In all other cases the Licensor expressly reserves any right to collect such royalties, including when the Licensed Material is used other than for NonCommercial purposes.
 
-Section 3 ñ License Conditions.
+Section 3 ‚Äì License Conditions.
 
 Your exercise of the Licensed Rights is expressly made subject to the following conditions.
 
@@ -115,7 +115,7 @@ a. Attribution.
 
      3. If requested by the Licensor, You must, to the extent reasonably practicable, remove any of the information required by Section 3(a)(1)(A) to the extent reasonably practicable.
 
-Section 4 ñ Sui Generis Database Rights.
+Section 4 ‚Äì Sui Generis Database Rights.
 
 Where the Licensed Rights include Sui Generis Database Rights that apply to Your use of the Licensed Material:
 
@@ -127,7 +127,7 @@ c. You must comply with the conditions in Section 3(a) if You Share all or a sub
 
 For the avoidance of doubt, this Section 4 supplements and does not replace Your obligations under this Public License where the Licensed Rights include other Copyright and Similar Rights.
 
-Section 5 ñ Disclaimer of Warranties and Limitation of Liability.
+Section 5 ‚Äì Disclaimer of Warranties and Limitation of Liability.
 
 a. Unless otherwise separately undertaken by the Licensor, to the extent possible, the Licensor offers the Licensed Material as-is and as-available, and makes no representations or warranties of any kind concerning the Licensed Material, whether express, implied, statutory, or other. This includes, without limitation, warranties of title, merchantability, fitness for a particular purpose, non-infringement, absence of latent or other defects, accuracy, or the presence or absence of errors, whether or not known or discoverable. Where disclaimers of warranties are not allowed in full or in part, this disclaimer may not apply to You.
 
@@ -135,7 +135,7 @@ b. To the extent possible, in no event will the Licensor be liable to You on any
 
 c. The disclaimer of warranties and limitation of liability provided above shall be interpreted in a manner that, to the extent possible, most closely approximates an absolute disclaimer and waiver of all liability.
 
-Section 6 ñ Term and Termination.
+Section 6 ‚Äì Term and Termination.
 
 a. This Public License applies for the term of the Copyright and Similar Rights licensed here. However, if You fail to comply with this Public License, then Your rights under this Public License terminate automatically.
 
@@ -149,13 +149,13 @@ d. For the avoidance of doubt, the Licensor may also offer the Licensed Material
 
 e. Sections 1, 5, 6, 7, and 8 survive termination of this Public License.
 
-Section 7 ñ Other Terms and Conditions.
+Section 7 ‚Äì Other Terms and Conditions.
 
 a. The Licensor shall not be bound by any additional or different terms or conditions communicated by You unless expressly agreed.
 
 b. Any arrangements, understandings, or agreements regarding the Licensed Material not stated herein are separate from and independent of the terms and conditions of this Public License.
 
-Section 8 ñ Interpretation.
+Section 8 ‚Äì Interpretation.
 
 a. For the avoidance of doubt, this Public License does not, and shall not be interpreted to, reduce, limit, restrict, or impose conditions on any use of the Licensed Material that could lawfully be made without permission under this Public License.
 
@@ -167,7 +167,7 @@ d. Nothing in this Public License constitutes or may be interpreted as a limitat
 
 =======================================================================
 
-Creative Commons is not a party to its public licenses. Notwithstanding, Creative Commons may elect to apply one of its public licenses to material it publishes and in those instances will be considered the ìLicensor.î The text of the Creative Commons public licenses is dedicated to the public domain under the CC0 Public Domain Dedication. Except for the limited purpose of indicating that material is licensed under a Creative Commons public license or as otherwise permitted by the Creative Commons policies published at creativecommons.org/policies, Creative Commons does not authorize the use of the trademark "Creative Commons" or any other trademark or logo of Creative Commons without its prior written consent including, without limitation, in connection with any unauthorized modifications to any of its public licenses or any other arrangements, understandings, or agreements concerning use of licensed material. For the avoidance of doubt, this paragraph does not form part of the public licenses.
+Creative Commons is not a party to its public licenses. Notwithstanding, Creative Commons may elect to apply one of its public licenses to material it publishes and in those instances will be considered the ‚ÄúLicensor.‚Äù The text of the Creative Commons public licenses is dedicated to the public domain under the CC0 Public Domain Dedication. Except for the limited purpose of indicating that material is licensed under a Creative Commons public license or as otherwise permitted by the Creative Commons policies published at creativecommons.org/policies, Creative Commons does not authorize the use of the trademark "Creative Commons" or any other trademark or logo of Creative Commons without its prior written consent including, without limitation, in connection with any unauthorized modifications to any of its public licenses or any other arrangements, understandings, or agreements concerning use of licensed material. For the avoidance of doubt, this paragraph does not form part of the public licenses.
 
 Creative Commons may be contacted at creativecommons.org.
 ```
