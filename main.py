@@ -1,13 +1,15 @@
 # -*- coding: utf-8 -*-
 import asyncio
 import logging
+import os
 from telebot.async_telebot import AsyncTeleBot
 from utils import (manage_config, init_db, load_context, save_context, clear_context,
                   get_user_translate_enabled, set_user_translate_enabled,
                   get_ai_translate_enabled, set_ai_translate_enabled,
                   get_memory, set_memory, generate_response_async, split_message,
                   get_character_name, set_character_name, translate_text, is_english,
-                  get_user_character_name, set_user_character_name, get_avg_response_time, temp_message_livetime)
+                  get_user_character_name, set_user_character_name, get_avg_response_time, temp_message_livetime,
+                  save_context_to_file)
 
 # При ошибке SSL: CERTIFICATE_VERIFY_FAILED certificate verify failed: unable to get local issuer certificate (_ssl.c:1129)')
 # pip install pip-system-certs
@@ -31,14 +33,19 @@ async def main():
         bot = AsyncTeleBot(config["telegram_token"])
         logger.info("Бот инициализирован с токеном")
 
-        # Добавляем обработчик исключений для polling
+        # Добавляем обработчик исключений для polling с перезапуском при TimeoutError
         async def polling_with_logging():
-            try:
-                logger.info("Начинаем polling")
-                await bot.polling(none_stop=True)
-            except Exception as e:
-                logger.error(f"Ошибка в polling: {e}", exc_info=True)
-                raise
+            while True:  # Бесконечный цикл для перезапуска polling
+                try:
+                    logger.info("Начинаем polling")
+                    await bot.polling(none_stop=True, timeout=60)  # Уменьшаем timeout до 60 секунд
+                except asyncio.TimeoutError as te:
+                    logger.error(f"TimeoutError в polling: {te}. Перезапуск через 5 секунд...")
+                    await asyncio.sleep(5)  # Задержка перед перезапуском
+                except Exception as e:
+                    logger.error(f"Неизвестная ошибка в polling: {e}", exc_info=True)
+                    await asyncio.sleep(5)  # Задержка перед перезапуском при других ошибках
+                    raise  # Повторно выбрасываем исключение для обработки выше
 
         @bot.message_handler(commands=['start'])
         async def handle_start(message):
@@ -64,6 +71,7 @@ async def main():
                 "/memory [текст] — Задать или посмотреть memory для ИИ (инструкцию о его поведении).\n"
                 "/character [имя] — Задать или посмотреть имя персонажа (по умолчанию 'Person').\n"
                 "/usercharacter [имя] — Задать или посмотреть имя пользователя (по умолчанию 'User'). Пробел и двоеточие добавляются автоматически.\n"
+                "/getcontext — Получить текущий контекст разговора в виде текстового файла.\n"
                 "Просто текст — Отправить сообщение ИИ, он ответит с учётом текущих настроек.\n"
                 "... — Продолжить историю без явного ввода."
             )
@@ -181,6 +189,36 @@ async def main():
                 await bot.reply_to(message, f"Текущее имя пользователя: {current_user_character}: ")
                 logger.info(f"Отправлено текущее имя пользователя: {current_user_character} для chat_id: {chat_id}")
 
+        @bot.message_handler(commands=['getcontext'])
+        async def handle_get_context(message):
+            chat_id = message.chat.id
+            username = message.from_user.username or "Unknown"
+            logger.info(f"Получена команда /getcontext от chat_id: {chat_id}, username: {username}")
+            
+            # Получаем путь к файлу с контекстом, передаём config
+            file_path = save_context_to_file(chat_id, config)
+            
+            if file_path is None:
+                await bot.reply_to(message, "Контекст пуст или содержит только системный промпт. Начните разговор, чтобы создать контекст!")
+                logger.info(f"Контекст пуст для chat_id: {chat_id}")
+                return
+            
+            try:
+                # Отправляем файл пользователю
+                with open(file_path, 'rb') as file:
+                    await bot.send_document(chat_id=chat_id, document=file, caption="Ваш текущий контекст")
+                logger.info(f"Файл контекста отправлен в chat_id: {chat_id}")
+            except Exception as e:
+                logger.error(f"Ошибка при отправке файла: {e}", exc_info=True)
+                await bot.reply_to(message, "Произошла ошибка при отправке файла контекста.")
+            finally:
+                # Удаляем временный файл
+                try:
+                    os.remove(file_path)
+                    logger.info(f"Временный файл удалён: {file_path}")
+                except Exception as e:
+                    logger.warning(f"Не удалось удалить временный файл {file_path}: {e}")
+
         @bot.message_handler(commands=['continue'])
         async def handle_continue(message):
             chat_id = message.chat.id
@@ -293,7 +331,7 @@ async def main():
         # (Остальной код остаётся без изменений)
 
         logger.info("Запуск polling")
-        await bot.polling(none_stop=True)
+        await polling_with_logging()
 
     except Exception as e:
         logger.error(f"Критическая ошибка в main: {e}", exc_info=True)

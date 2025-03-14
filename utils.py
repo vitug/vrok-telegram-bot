@@ -12,6 +12,8 @@ from deep_translator import GoogleTranslator
 from telebot import apihelper
 import time
 import asyncio
+import tempfile
+import os
 
 # Основной логгер (уже есть в коде)
 logging.basicConfig(
@@ -392,6 +394,32 @@ async def check_kobold_api(url):
             logger.error(f"Ошибка подключения к Kobold API: {e}")
             return False
 
+def save_context_to_file(chat_id, config, db_file="context.db"):
+    """Сохраняет текущий контекст в временный текстовый файл, исключая системный промпт, и возвращает путь к файлу."""
+    logger.info(f"Сохранение контекста в файл для chat_id: {chat_id}")
+    context = load_context(chat_id, db_file)
+    if not context:
+        logger.info("Контекст пуст, возвращаем None")
+        return None
+    
+    # Удаляем системный промпт из начала контекста, если он там есть
+    system_prompt = config["system_prompt"]
+    if context.startswith(system_prompt):
+        cleaned_context = context[len(system_prompt):].strip()
+    else:
+        cleaned_context = context.strip()
+    
+    if not cleaned_context:
+        logger.info("Контекст после удаления системного промпта пуст, возвращаем None")
+        return None
+    
+    # Создаём временный файл
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".txt", mode="w", encoding="utf-8") as temp_file:
+        temp_file.write(cleaned_context)
+        file_path = temp_file.name
+    logger.info(f"Контекст сохранён в файл: {file_path}")
+    return file_path
+
 def remove_last_word(text):
     """Удаляет только последнее слово из текста, сохраняя знаки препинания и кавычки."""
     # Учитываем текст в кавычках и знаки препинания в конце
@@ -530,14 +558,29 @@ async def generate_response_async(text, config, chat_id, context="", user_transl
                 json=payload,
                 timeout=aiohttp.ClientTimeout(total=config.get("timeout", 300))
             ) as response:
+
+                # Проверяем статус ответа
+                if response.status != 200:
+                    logger.error(f"Kobold API вернул статус {response.status}")
+                    return f"Ошибка: Kobold API вернул статус {response.status}", text, "", character_name, character_prompt, 0.0
+
                 # Получаем текстовый ответ от API
-                response_text = await response.text()
-                logger.info(f"Ответ Kobold API: {response_text[:50]}...")
-                if not response_text:
+                # Читаем ответ как байты, чтобы избежать ContentLengthError
+                response_bytes = await response.read()
+                if not response_bytes:
                     raise ValueError("Пустой ответ от Kobold API")
-                
+
+                # Декодируем вручную с обработкой ошибок
+                try:
+                    response_text = response_bytes.decode('utf-8')
+                except UnicodeDecodeError:
+                    logger.error("Не удалось декодировать ответ от Kobold API")
+                    return "Ошибка: не удалось декодировать ответ от Kobold API", text, "", character_name, character_prompt, 0.0
+
+                logger.info(f"Ответ Kobold API: {response_text[:50]}...")
                 # Парсим JSON-ответ
                 result = json.loads(response_text)
+
                 # Логируем полный JSON-ответ в ai_details.log, если включено
                 if config.get("log_ai_details", False):
                     ai_detail_logger.info(f"JSON-ответ от Kobold API для chat_id {chat_id}: {json.dumps(result, indent=2)}")
@@ -592,7 +635,7 @@ async def generate_response_async(text, config, chat_id, context="", user_transl
                 display_response_en = combined_response_en.replace(character_prompt, "")
                 logger.info(f"Ответ для вывода пользователю: {display_response_en[:50]}...")
 
-                # Формируем окончательный ответ с переводом, если включён
+                # Формируем окончательный ответ с учётом настроек перевода
                 if ai_translate_enabled and is_english(display_response_en):
                     response_ru = translate_text(display_response_en, to_english=False)
                     if continue_only or text_en == "...":
@@ -602,20 +645,38 @@ async def generate_response_async(text, config, chat_id, context="", user_transl
                             f"Перевод на русский: {response_ru}"
                         )
                     else:
-                        full_response = (
-                            f"Перевод текста для ИИ на английский: {text_en}\n"
-                            f"Ответ ИИ (на английском): {display_response_en}\n"
-                            f"---\n"
-                            f"Перевод на русский: {response_ru}"
-                        )
+                        if user_translate_enabled:
+                            full_response = (
+                                f"Перевод текста для ИИ на английский: {text_en}\n"
+                                f"Ответ ИИ (на английском): {display_response_en}\n"
+                                f"---\n"
+                                f"Перевод на русский: {response_ru}"
+                            )
+                        else:
+                            full_response = (
+                                f"Текст для ИИ: {text_en}\n"
+                                f"Ответ ИИ (на английском): {display_response_en}\n"
+                                f"---\n"
+                                f"Перевод на русский: {response_ru}"
+                            )
                 else:
+                    # Определяем префикс в зависимости от языка ответа
+                    response_prefix = "Ответ ИИ (на английском):" if is_english(display_response_en) else "Ответ ИИ:"
+                    
                     if continue_only or text_en == "...":
-                        full_response = f"Ответ ИИ (на английском): {display_response_en}"
+                        full_response = f"{response_prefix} {display_response_en}"
                     else:
-                        full_response = (
-                            f"Перевод текста для ИИ на английский: {text_en}\n"
-                            f"Ответ ИИ (на английском): {display_response_en}"
-                        )
+                        if user_translate_enabled:
+                            full_response = (
+                                f"Перевод текста для ИИ на английский: {text_en}\n"
+                                f"{response_prefix} {display_response_en}"
+                            )
+                        else:
+                            full_response = (
+                                f"Текст для ИИ: {text_en}\n"
+                                f"{response_prefix} {display_response_en}"
+                            )
+                            
                 logger.info(f"Итоговый ответ: {full_response[:50]}...")
 
                 # Завершаем замер времени и сохраняем его
@@ -628,6 +689,12 @@ async def generate_response_async(text, config, chat_id, context="", user_transl
                 return full_response, text_en, response_en_cleaned, character_name, character_prompt, response_time
 
         # Обрабатываем возможные ошибки
+        except aiohttp.ClientPayloadError as e:
+            logger.error(f"Ошибка полезной нагрузки от Kobold API: {e}", exc_info=True)
+            return (
+                "Ошибка: ответ от Kobold API был получен не полностью. "
+                "Попробуйте снова или обратитесь к администратору."
+            ), text, "", character_name, character_prompt, 0.0
         except asyncio.TimeoutError:
             logger.error("Превышено время ожидания ответа от Kobold API")
             default_character_name = get_default_character_name()  # Используем функцию
