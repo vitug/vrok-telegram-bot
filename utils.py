@@ -88,6 +88,7 @@ def init_db(db_file="context.db"):
     conn = sqlite3.connect(db_file)
     cursor = conn.cursor()
 
+    # Проверка и создание таблицы user_context
     cursor.execute("PRAGMA table_info(user_context)")
     if not cursor.fetchall():
         cursor.execute('''
@@ -98,6 +99,7 @@ def init_db(db_file="context.db"):
         ''')
         logger.info("Создана таблица user_context")
 
+    # Проверка и создание таблицы chat_settings
     cursor.execute("PRAGMA table_info(chat_settings)")
     columns = [col[1] for col in cursor.fetchall()]
     if not columns:
@@ -107,20 +109,20 @@ def init_db(db_file="context.db"):
                 user_translate_enabled INTEGER NOT NULL DEFAULT 1,
                 ai_translate_enabled INTEGER NOT NULL DEFAULT 1,
                 memory TEXT DEFAULT '',
-                character_name TEXT DEFAULT '{get_default_character_name()}',  # Используем функцию
+                character_name TEXT DEFAULT '{get_default_character_name()}',
                 user_character_name TEXT DEFAULT 'User'
             )
         ''')
         logger.info("Создана таблица chat_settings")
     else:
         if "character_name" not in columns:
-            cursor.execute(f"ALTER TABLE chat_settings ADD COLUMN character_name TEXT DEFAULT '{get_default_character_name()}'")  # Используем функцию
+            cursor.execute(f"ALTER TABLE chat_settings ADD COLUMN character_name TEXT DEFAULT '{get_default_character_name()}'")
             logger.info("Добавлен столбец character_name")
         if "user_character_name" not in columns:
             cursor.execute("ALTER TABLE chat_settings ADD COLUMN user_character_name TEXT DEFAULT 'User'")
             logger.info("Добавлен столбец user_character_name")
 
-    # Новая таблица для статистики времени генерации
+    # Проверка и создание таблицы response_times (перемещено до conn.close())
     cursor.execute("PRAGMA table_info(response_times)")
     if not cursor.fetchall():
         cursor.execute('''
@@ -133,6 +135,7 @@ def init_db(db_file="context.db"):
         ''')
         logger.info("Создана таблица response_times для статистики времени генерации")
 
+    # Завершение работы с базой данных
     conn.commit()
     conn.close()
     logger.info(f"База данных готова: {db_file}")
