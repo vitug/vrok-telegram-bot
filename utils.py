@@ -12,7 +12,7 @@ from telebot import apihelper
 import time
 import asyncio
 
-# Основной логгер
+# РћСЃРЅРѕРІРЅРѕР№ Р»РѕРіРіРµСЂ
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
@@ -23,7 +23,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Новый логгер для детального логирования AI-ответов и контекста
+# РќРѕРІС‹Р№ Р»РѕРіРіРµСЂ РґР»СЏ РґРµС‚Р°Р»СЊРЅРѕРіРѕ Р»РѕРіРёСЂРѕРІР°РЅРёСЏ AI-РѕС‚РІРµС‚РѕРІ Рё РєРѕРЅС‚РµРєСЃС‚Р°
 ai_detail_logger = logging.getLogger('ai_details')
 ai_detail_logger.setLevel(logging.INFO)
 ai_detail_handler = logging.FileHandler("ai_details.log", encoding="utf-8")
@@ -31,7 +31,7 @@ ai_detail_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - 
 ai_detail_logger.addHandler(ai_detail_handler)
 ai_detail_logger.propagate = False
 
-# Настройка SOCKS5-прокси
+# РќР°СЃС‚СЂРѕР№РєР° SOCKS5-РїСЂРѕРєСЃРё
 PROXY = "socks5://localhost:3128"
 apihelper.proxy = {'https': PROXY}
 
@@ -49,7 +49,7 @@ def temp_message_livetime(config=None):
     return 30
 
 def manage_config(config_file="config.json"):
-    logger.info(f"Управление конфигурацией: {config_file}")
+    logger.info(f"РЈРїСЂР°РІР»РµРЅРёРµ РєРѕРЅС„РёРіСѓСЂР°С†РёРµР№: {config_file}")
     default_config = {
         "telegram_token": "YOUR_TELEGRAM_BOT_TOKEN",
         "kobold_api_url": "http://127.0.0.1:5001/api/v1/generate",
@@ -66,7 +66,7 @@ def manage_config(config_file="config.json"):
     if not os.path.exists(config_file):
         with open(config_file, 'w', encoding='utf-8') as f:
             json.dump(default_config, f, indent=4, ensure_ascii=False)
-        logger.info(f"Создан новый файл конфигурации: {config_file}")
+        logger.info(f"РЎРѕР·РґР°РЅ РЅРѕРІС‹Р№ С„Р°Р№Р» РєРѕРЅС„РёРіСѓСЂР°С†РёРё: {config_file}")
     with open(config_file, 'r', encoding='utf-8') as f:
         config = json.load(f)
     for key, value in default_config.items():
@@ -75,15 +75,15 @@ def manage_config(config_file="config.json"):
     if config.get("proxy"):
         apihelper.proxy = {'https': config["proxy"]}
         translation_session.proxies = {"http": config["proxy"], "https": config["proxy"]}
-    logger.info(f"Конфигурация загружена: {json.dumps(config, indent=2)[:50]}...")
+    logger.info(f"РљРѕРЅС„РёРіСѓСЂР°С†РёСЏ Р·Р°РіСЂСѓР¶РµРЅР°: {json.dumps(config, indent=2)[:50]}...")
     return config
 
 def get_default_character_name():
-    """Возвращает имя персонажа по умолчанию."""
+    """Р’РѕР·РІСЂР°С‰Р°РµС‚ РёРјСЏ РїРµСЂСЃРѕРЅР°Р¶Р° РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ."""
     return "Vrok"
 
 def init_db(db_file="context.db"):
-    logger.info(f"Инициализация базы данных: {db_file}")
+    logger.info(f"РРЅРёС†РёР°Р»РёР·Р°С†РёСЏ Р±Р°Р·С‹ РґР°РЅРЅС‹С…: {db_file}")
     conn = sqlite3.connect(db_file)
     cursor = conn.cursor()
 
@@ -95,7 +95,7 @@ def init_db(db_file="context.db"):
                 context TEXT NOT NULL
             )
         ''')
-        logger.info("Создана таблица user_context")
+        logger.info("РЎРѕР·РґР°РЅР° С‚Р°Р±Р»РёС†Р° user_context")
 
     cursor.execute("PRAGMA table_info(chat_settings)")
     columns = [col[1] for col in cursor.fetchall()]
@@ -110,14 +110,14 @@ def init_db(db_file="context.db"):
                 user_character_name TEXT DEFAULT 'User'
             )
         ''')
-        logger.info("Создана таблица chat_settings")
+        logger.info("РЎРѕР·РґР°РЅР° С‚Р°Р±Р»РёС†Р° chat_settings")
     else:
         if "character_name" not in columns:
             cursor.execute(f"ALTER TABLE chat_settings ADD COLUMN character_name TEXT DEFAULT '{get_default_character_name()}'")
-            logger.info("Добавлен столбец character_name")
+            logger.info("Р”РѕР±Р°РІР»РµРЅ СЃС‚РѕР»Р±РµС† character_name")
         if "user_character_name" not in columns:
             cursor.execute("ALTER TABLE chat_settings ADD COLUMN user_character_name TEXT DEFAULT 'User'")
-            logger.info("Добавлен столбец user_character_name")
+            logger.info("Р”РѕР±Р°РІР»РµРЅ СЃС‚РѕР»Р±РµС† user_character_name")
 
     cursor.execute("PRAGMA table_info(response_times)")
     if not cursor.fetchall():
@@ -129,40 +129,40 @@ def init_db(db_file="context.db"):
                 timestamp INTEGER NOT NULL
             )
         ''')
-        logger.info("Создана таблица response_times")
+        logger.info("РЎРѕР·РґР°РЅР° С‚Р°Р±Р»РёС†Р° response_times")
 
     conn.commit()
     conn.close()
-    logger.info(f"База данных готова: {db_file}")
+    logger.info(f"Р‘Р°Р·Р° РґР°РЅРЅС‹С… РіРѕС‚РѕРІР°: {db_file}")
 
 def save_context(chat_id, context, db_file="context.db"):
-    logger.info(f"Сохранение контекста для chat_id: {chat_id}, контекст: {context[:50]}...")
+    logger.info(f"РЎРѕС…СЂР°РЅРµРЅРёРµ РєРѕРЅС‚РµРєСЃС‚Р° РґР»СЏ chat_id: {chat_id}, РєРѕРЅС‚РµРєСЃС‚: {context[:50]}...")
     conn = sqlite3.connect(db_file)
     cursor = conn.cursor()
     cursor.execute('INSERT OR REPLACE INTO user_context (chat_id, context) VALUES (?, ?)', (chat_id, context))
     conn.commit()
     conn.close()
-    logger.info(f"Контекст сохранён для chat_id: {chat_id}")
+    logger.info(f"РљРѕРЅС‚РµРєСЃС‚ СЃРѕС…СЂР°РЅС‘РЅ РґР»СЏ chat_id: {chat_id}")
 
 def load_context(chat_id, db_file="context.db"):
-    logger.info(f"Загрузка контекста для chat_id: {chat_id}")
+    logger.info(f"Р—Р°РіСЂСѓР·РєР° РєРѕРЅС‚РµРєСЃС‚Р° РґР»СЏ chat_id: {chat_id}")
     conn = sqlite3.connect(db_file)
     cursor = conn.cursor()
     cursor.execute('SELECT context FROM user_context WHERE chat_id = ?', (chat_id,))
     result = cursor.fetchone()
     conn.close()
     context = result[0] if result else ""
-    logger.info(f"Контекст загружен: {context[:50]}...")
+    logger.info(f"РљРѕРЅС‚РµРєСЃС‚ Р·Р°РіСЂСѓР¶РµРЅ: {context[:50]}...")
     return context
 
 def clear_context(chat_id, db_file="context.db"):
-    logger.info(f"Очистка контекста для chat_id: {chat_id}")
+    logger.info(f"РћС‡РёСЃС‚РєР° РєРѕРЅС‚РµРєСЃС‚Р° РґР»СЏ chat_id: {chat_id}")
     conn = sqlite3.connect(db_file)
     cursor = conn.cursor()
     cursor.execute('DELETE FROM user_context WHERE chat_id = ?', (chat_id,))
     conn.commit()
     conn.close()
-    logger.info(f"Контекст очищен для chat_id: {chat_id}")
+    logger.info(f"РљРѕРЅС‚РµРєСЃС‚ РѕС‡РёС‰РµРЅ РґР»СЏ chat_id: {chat_id}")
 
 def get_user_translate_enabled(chat_id, db_file="context.db"):
     conn = sqlite3.connect(db_file)
@@ -171,7 +171,7 @@ def get_user_translate_enabled(chat_id, db_file="context.db"):
     result = cursor.fetchone()
     conn.close()
     enabled = result[0] if result else 1
-    logger.info(f"User translate enabled для chat_id {chat_id}: {enabled}")
+    logger.info(f"User translate enabled РґР»СЏ chat_id {chat_id}: {enabled}")
     return bool(enabled)
 
 def set_user_translate_enabled(chat_id, enabled, db_file="context.db"):
@@ -181,7 +181,7 @@ def set_user_translate_enabled(chat_id, enabled, db_file="context.db"):
                    (chat_id, int(enabled)))
     conn.commit()
     conn.close()
-    logger.info(f"User translate установлен в {enabled} для chat_id: {chat_id}")
+    logger.info(f"User translate СѓСЃС‚Р°РЅРѕРІР»РµРЅ РІ {enabled} РґР»СЏ chat_id: {chat_id}")
 
 def get_ai_translate_enabled(chat_id, db_file="context.db"):
     conn = sqlite3.connect(db_file)
@@ -190,7 +190,7 @@ def get_ai_translate_enabled(chat_id, db_file="context.db"):
     result = cursor.fetchone()
     conn.close()
     enabled = result[0] if result else 1
-    logger.info(f"AI translate enabled для chat_id {chat_id}: {enabled}")
+    logger.info(f"AI translate enabled РґР»СЏ chat_id {chat_id}: {enabled}")
     return bool(enabled)
 
 def set_ai_translate_enabled(chat_id, enabled, db_file="context.db"):
@@ -200,10 +200,10 @@ def set_ai_translate_enabled(chat_id, enabled, db_file="context.db"):
                    (chat_id, int(enabled)))
     conn.commit()
     conn.close()
-    logger.info(f"AI translate установлен в {enabled} для chat_id: {chat_id}")
+    logger.info(f"AI translate СѓСЃС‚Р°РЅРѕРІР»РµРЅ РІ {enabled} РґР»СЏ chat_id: {chat_id}")
 
 def get_memory(chat_id, db_file="context.db"):
-    logger.info(f"Получение memory для chat_id: {chat_id}")
+    logger.info(f"РџРѕР»СѓС‡РµРЅРёРµ memory РґР»СЏ chat_id: {chat_id}")
     conn = sqlite3.connect(db_file)
     cursor = conn.cursor()
     cursor.execute('SELECT memory FROM chat_settings WHERE chat_id = ?', (chat_id,))
@@ -214,16 +214,16 @@ def get_memory(chat_id, db_file="context.db"):
     return memory
 
 def set_memory(chat_id, memory, db_file="context.db"):
-    logger.info(f"Установка memory для chat_id: {chat_id}: {memory[:50]}...")
+    logger.info(f"РЈСЃС‚Р°РЅРѕРІРєР° memory РґР»СЏ chat_id: {chat_id}: {memory[:50]}...")
     conn = sqlite3.connect(db_file)
     cursor = conn.cursor()
     cursor.execute('INSERT OR REPLACE INTO chat_settings (chat_id, memory) VALUES (?, ?)', (chat_id, memory))
     conn.commit()
     conn.close()
-    logger.info(f"Memory установлено для chat_id: {chat_id}")
+    logger.info(f"Memory СѓСЃС‚Р°РЅРѕРІР»РµРЅРѕ РґР»СЏ chat_id: {chat_id}")
 
 def get_character_name(chat_id, db_file="context.db"):
-    logger.info(f"Получение character_name для chat_id: {chat_id}")
+    logger.info(f"РџРѕР»СѓС‡РµРЅРёРµ character_name РґР»СЏ chat_id: {chat_id}")
     conn = sqlite3.connect(db_file)
     cursor = conn.cursor()
     cursor.execute('SELECT character_name FROM chat_settings WHERE chat_id = ?', (chat_id,))
@@ -234,16 +234,16 @@ def get_character_name(chat_id, db_file="context.db"):
     return name
 
 def set_character_name(chat_id, name, db_file="context.db"):
-    logger.info(f"Установка character_name для chat_id: {chat_id}: {name}")
+    logger.info(f"РЈСЃС‚Р°РЅРѕРІРєР° character_name РґР»СЏ chat_id: {chat_id}: {name}")
     conn = sqlite3.connect(db_file)
     cursor = conn.cursor()
     cursor.execute('INSERT OR REPLACE INTO chat_settings (chat_id, character_name) VALUES (?, ?)', (chat_id, name))
     conn.commit()
     conn.close()
-    logger.info(f"Character name установлено для chat_id: {chat_id}")
+    logger.info(f"Character name СѓСЃС‚Р°РЅРѕРІР»РµРЅРѕ РґР»СЏ chat_id: {chat_id}")
 
 def get_user_character_name(chat_id, db_file="context.db"):
-    logger.info(f"Получение user_character_name для chat_id: {chat_id}")
+    logger.info(f"РџРѕР»СѓС‡РµРЅРёРµ user_character_name РґР»СЏ chat_id: {chat_id}")
     conn = sqlite3.connect(db_file)
     cursor = conn.cursor()
     cursor.execute('SELECT user_character_name FROM chat_settings WHERE chat_id = ?', (chat_id,))
@@ -254,16 +254,16 @@ def get_user_character_name(chat_id, db_file="context.db"):
     return name
 
 def set_user_character_name(chat_id, name, db_file="context.db"):
-    logger.info(f"Установка user_character_name для chat_id: {chat_id}: {name}")
+    logger.info(f"РЈСЃС‚Р°РЅРѕРІРєР° user_character_name РґР»СЏ chat_id: {chat_id}: {name}")
     conn = sqlite3.connect(db_file)
     cursor = conn.cursor()
     cursor.execute('INSERT OR REPLACE INTO chat_settings (chat_id, user_character_name) VALUES (?, ?)', (chat_id, name))
     conn.commit()
     conn.close()
-    logger.info(f"User character name установлено для chat_id: {chat_id}")
+    logger.info(f"User character name СѓСЃС‚Р°РЅРѕРІР»РµРЅРѕ РґР»СЏ chat_id: {chat_id}")
 
 def save_response_time(chat_id, response_time, db_file="context.db"):
-    logger.info(f"Сохранение времени ответа для chat_id: {chat_id}: {response_time}")
+    logger.info(f"РЎРѕС…СЂР°РЅРµРЅРёРµ РІСЂРµРјРµРЅРё РѕС‚РІРµС‚Р° РґР»СЏ chat_id: {chat_id}: {response_time}")
     conn = sqlite3.connect(db_file)
     cursor = conn.cursor()
     cursor.execute('INSERT INTO response_times (chat_id, response_time, timestamp) VALUES (?, ?, ?)',
@@ -278,7 +278,7 @@ def get_avg_response_time(chat_id, db_file="context.db"):
     result = cursor.fetchone()
     conn.close()
     avg_time = result[0] if result and result[0] is not None else None
-    logger.info(f"Среднее время ответа для chat_id {chat_id}: {avg_time}")
+    logger.info(f"РЎСЂРµРґРЅРµРµ РІСЂРµРјСЏ РѕС‚РІРµС‚Р° РґР»СЏ chat_id {chat_id}: {avg_time}")
     return avg_time
 
 def translate_text(text, to_english=True):
@@ -287,7 +287,7 @@ def translate_text(text, to_english=True):
             return translator.translate(text)
         return translator_reverse.translate(text)
     except Exception as e:
-        logger.error(f"Ошибка перевода: {e}")
+        logger.error(f"РћС€РёР±РєР° РїРµСЂРµРІРѕРґР°: {e}")
         return text
 
 def is_english(text):
@@ -309,22 +309,22 @@ def split_message(message, max_length=4096):
     return parts
 
 async def check_kobold_api(url):
-    logger.info(f"Проверка Kobold API: {url}")
+    logger.info(f"РџСЂРѕРІРµСЂРєР° Kobold API: {url}")
     async with aiohttp.ClientSession() as session:
         try:
             async with session.get(url) as response:
                 if response.status == 200:
-                    logger.info("Kobold API доступен")
+                    logger.info("Kobold API РґРѕСЃС‚СѓРїРµРЅ")
                     return True
                 else:
-                    logger.error(f"Kobold API вернул статус {response.status}")
+                    logger.error(f"Kobold API РІРµСЂРЅСѓР» СЃС‚Р°С‚СѓСЃ {response.status}")
                     return False
         except Exception as e:
-            logger.error(f"Ошибка подключения к Kobold API: {e}")
+            logger.error(f"РћС€РёР±РєР° РїРѕРґРєР»СЋС‡РµРЅРёСЏ Рє Kobold API: {e}")
             return False
 
 def remove_last_word(text):
-    """Удаляет только последнее слово из текста, сохраняя знаки препинания и кавычки."""
+    """РЈРґР°Р»СЏРµС‚ С‚РѕР»СЊРєРѕ РїРѕСЃР»РµРґРЅРµРµ СЃР»РѕРІРѕ РёР· С‚РµРєСЃС‚Р°, СЃРѕС…СЂР°РЅСЏСЏ Р·РЅР°РєРё РїСЂРµРїРёРЅР°РЅРёСЏ Рё РєР°РІС‹С‡РєРё."""
     pattern = r'(\s+)(\w+)(\W*)$'
     match = re.search(pattern, text)
     if match:
@@ -332,55 +332,55 @@ def remove_last_word(text):
     return text
 
 async def generate_response_async(text, config, chat_id, context="", user_translate_enabled=True, ai_translate_enabled=True, continue_only=False):
-    logger.info(f"Генерация ответа для chat_id: {chat_id}, текст: {text[:50]}..., continue_only: {continue_only}")
-    start_time = time.time()  # Запускаем замер времени выполнения
+    logger.info(f"Р“РµРЅРµСЂР°С†РёСЏ РѕС‚РІРµС‚Р° РґР»СЏ chat_id: {chat_id}, С‚РµРєСЃС‚: {text[:50]}..., continue_only: {continue_only}")
+    start_time = time.time()  # Р—Р°РїСѓСЃРєР°РµРј Р·Р°РјРµСЂ РІСЂРµРјРµРЅРё РІС‹РїРѕР»РЅРµРЅРёСЏ
 
     if not await check_kobold_api(config["kobold_api_url"].replace("/api/v1/generate", "")):
-        logger.error(f"Kobold API недоступен: {config['kobold_api_url']}")
-        return f"Ошибка: Kobold API недоступен по адресу {config['kobold_api_url']}", text, "", get_default_character_name(), f"Roleplay character {get_default_character_name()}'s answer: ", 0.0
+        logger.error(f"Kobold API РЅРµРґРѕСЃС‚СѓРїРµРЅ: {config['kobold_api_url']}")
+        return f"РћС€РёР±РєР°: Kobold API РЅРµРґРѕСЃС‚СѓРїРµРЅ РїРѕ Р°РґСЂРµСЃСѓ {config['kobold_api_url']}", text, "", get_default_character_name(), f"Roleplay character {get_default_character_name()}'s answer: ", 0.0
 
-    # Проверяем наличие специальных символов "мдXXX", "mlXXX" или "mdXXX" в конце текста
+    # РџСЂРѕРІРµСЂСЏРµРј РЅР°Р»РёС‡РёРµ СЃРїРµС†РёР°Р»СЊРЅС‹С… СЃРёРјРІРѕР»РѕРІ "РјРґXXX", "mlXXX" РёР»Рё "mdXXX" РІ РєРѕРЅС†Рµ С‚РµРєСЃС‚Р°
     max_length = config["max_length"]
-    pattern = r'(мд|ml|md)(\d{3})$'
+    pattern = r'(РјРґ|ml|md)(\d{3})$'
     match = re.search(pattern, text.strip())
     if match:
         length_value = int(match.group(2))
         if length_value > 512:
             max_length = 512
-            logger.info(f"Заданное значение max_length ({length_value}) превышает 512, установлено 512")
+            logger.info(f"Р—Р°РґР°РЅРЅРѕРµ Р·РЅР°С‡РµРЅРёРµ max_length ({length_value}) РїСЂРµРІС‹С€Р°РµС‚ 512, СѓСЃС‚Р°РЅРѕРІР»РµРЅРѕ 512")
         else:
             max_length = length_value
-            logger.info(f"Установлено max_length из запроса: {max_length}")
+            logger.info(f"РЈСЃС‚Р°РЅРѕРІР»РµРЅРѕ max_length РёР· Р·Р°РїСЂРѕСЃР°: {max_length}")
         text = re.sub(pattern, '', text).strip()
-        logger.info(f"Текст после удаления специальных символов: {text[:50]}...")
+        logger.info(f"РўРµРєСЃС‚ РїРѕСЃР»Рµ СѓРґР°Р»РµРЅРёСЏ СЃРїРµС†РёР°Р»СЊРЅС‹С… СЃРёРјРІРѕР»РѕРІ: {text[:50]}...")
 
     if user_translate_enabled and not is_english(text) and text != "...":
         text_en = translate_text(text, to_english=True)
-        logger.info(f"Текст переведён на английский: {text_en[:50]}...")
+        logger.info(f"РўРµРєСЃС‚ РїРµСЂРµРІРµРґС‘РЅ РЅР° Р°РЅРіР»РёР№СЃРєРёР№: {text_en[:50]}...")
     else:
         text_en = text
-        logger.info(f"Текст используется как есть: {text_en[:50]}...")
+        logger.info(f"РўРµРєСЃС‚ РёСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ РєР°Рє РµСЃС‚СЊ: {text_en[:50]}...")
 
     context_en = context if context else config["system_prompt"]
-    logger.info(f"Контекст: {context_en[:50]}...")
+    logger.info(f"РљРѕРЅС‚РµРєСЃС‚: {context_en[:50]}...")
     character_name = get_character_name(chat_id)
     user_character_name = get_user_character_name(chat_id)
     formatted_user_character_name = f"{user_character_name}: "
     character_prompt = f"Roleplay character {character_name}'s answer: "
     if continue_only or text_en == "...":
         prompt = context_en
-        logger.info(f"Продолжение с контекстом: {prompt[:50]}...")
+        logger.info(f"РџСЂРѕРґРѕР»Р¶РµРЅРёРµ СЃ РєРѕРЅС‚РµРєСЃС‚РѕРј: {prompt[:50]}...")
     else:
         prompt = f"{context_en}\n{formatted_user_character_name}{text_en}\n{character_prompt}"
         text_en_context = f"\n{formatted_user_character_name}{text_en}\n{character_prompt}"
-        logger.info(f"Полный промпт: {prompt[:50]}...")
+        logger.info(f"РџРѕР»РЅС‹Р№ РїСЂРѕРјРїС‚: {prompt[:50]}...")
 
     memory = get_memory(chat_id)
     if not memory:
         memory = "You are a cheerful AI, always responding with a bit of humor."
-        logger.info(f"Memory по умолчанию: {memory[:50]}...")
+        logger.info(f"Memory РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ: {memory[:50]}...")
     else:
-        logger.info(f"Пользовательский memory: {memory[:50]}...")
+        logger.info(f"РџРѕР»СЊР·РѕРІР°С‚РµР»СЊСЃРєРёР№ memory: {memory[:50]}...")
 
     payload = {
         "prompt": prompt,
@@ -444,7 +444,7 @@ async def generate_response_async(text, config, chat_id, context="", user_transl
         "ignore_eos": False,
         "rep_pen_slope": 1
     }
-    logger.info(f"Отправка запроса к Kobold API с промптом: {prompt[:50]}...")
+    logger.info(f"РћС‚РїСЂР°РІРєР° Р·Р°РїСЂРѕСЃР° Рє Kobold API СЃ РїСЂРѕРјРїС‚РѕРј: {prompt[:50]}...")
 
     async with aiohttp.ClientSession() as session:
         try:
@@ -454,23 +454,23 @@ async def generate_response_async(text, config, chat_id, context="", user_transl
                 timeout=aiohttp.ClientTimeout(total=config.get("timeout", 300))
             ) as response:
                 response_text = await response.text()
-                logger.info(f"Ответ Kobold API: {response_text[:50]}...")
+                logger.info(f"РћС‚РІРµС‚ Kobold API: {response_text[:50]}...")
                 if not response_text:
-                    raise ValueError("Пустой ответ от Kobold API")
+                    raise ValueError("РџСѓСЃС‚РѕР№ РѕС‚РІРµС‚ РѕС‚ Kobold API")
                 result = json.loads(response_text)
                 if config.get("log_ai_details", False):
-                    ai_detail_logger.info(f"JSON-ответ от Kobold API для chat_id {chat_id}: {json.dumps(result, indent=2)}")
-                logger.info(f"JSON ответ: {json.dumps(result)[:50]}...")
+                    ai_detail_logger.info(f"JSON-РѕС‚РІРµС‚ РѕС‚ Kobold API РґР»СЏ chat_id {chat_id}: {json.dumps(result, indent=2)}")
+                logger.info(f"JSON РѕС‚РІРµС‚: {json.dumps(result)[:50]}...")
                 if "results" not in result or not result["results"]:
-                    raise ValueError("Некорректный формат ответа")
+                    raise ValueError("РќРµРєРѕСЂСЂРµРєС‚РЅС‹Р№ С„РѕСЂРјР°С‚ РѕС‚РІРµС‚Р°")
                 response_en = result["results"][0]["text"]
                 if not response_en:
-                    raise ValueError("Пустой текст в ответе")
+                    raise ValueError("РџСѓСЃС‚РѕР№ С‚РµРєСЃС‚ РІ РѕС‚РІРµС‚Рµ")
 
                 response_en_cleaned = remove_last_word(response_en)
                 if not response_en_cleaned.strip():
                     response_en_cleaned = response_en
-                logger.info(f"Ответ после удаления последнего слова: {response_en_cleaned[:50]}...")
+                logger.info(f"РћС‚РІРµС‚ РїРѕСЃР»Рµ СѓРґР°Р»РµРЅРёСЏ РїРѕСЃР»РµРґРЅРµРіРѕ СЃР»РѕРІР°: {response_en_cleaned[:50]}...")
 
                 last_sentence = ""
                 if continue_only and context_en:
@@ -487,63 +487,63 @@ async def generate_response_async(text, config, chat_id, context="", user_transl
                                 if sentence.strip():
                                     last_sentence = sentence.strip()
                                     break
-                        logger.info(f"Последнее предложение из контекста (без точки в конце): {last_sentence[:50]}...")
+                        logger.info(f"РџРѕСЃР»РµРґРЅРµРµ РїСЂРµРґР»РѕР¶РµРЅРёРµ РёР· РєРѕРЅС‚РµРєСЃС‚Р° (Р±РµР· С‚РѕС‡РєРё РІ РєРѕРЅС†Рµ): {last_sentence[:50]}...")
                     else:
-                        logger.info("Контекст заканчивается точкой, последнее предложение не извлекается")
+                        logger.info("РљРѕРЅС‚РµРєСЃС‚ Р·Р°РєР°РЅС‡РёРІР°РµС‚СЃСЏ С‚РѕС‡РєРѕР№, РїРѕСЃР»РµРґРЅРµРµ РїСЂРµРґР»РѕР¶РµРЅРёРµ РЅРµ РёР·РІР»РµРєР°РµС‚СЃСЏ")
 
                 combined_response_en = f"{last_sentence} {response_en_cleaned}".strip() if last_sentence else response_en_cleaned
-                logger.info(f"Объединённый ответ: {combined_response_en[:50]}...")
+                logger.info(f"РћР±СЉРµРґРёРЅС‘РЅРЅС‹Р№ РѕС‚РІРµС‚: {combined_response_en[:50]}...")
 
                 updated_context = f"{context}{text_en_context if not continue_only else ''}{response_en_cleaned}"
                 save_context(chat_id, updated_context)
                 if config.get("log_ai_details", False):
-                    ai_detail_logger.info(f"Обновлённый контекст для chat_id {chat_id}: {updated_context}")
-                logger.info(f"Обновлённый контекст сохранён: {updated_context[:50]}...")
+                    ai_detail_logger.info(f"РћР±РЅРѕРІР»С‘РЅРЅС‹Р№ РєРѕРЅС‚РµРєСЃС‚ РґР»СЏ chat_id {chat_id}: {updated_context}")
+                logger.info(f"РћР±РЅРѕРІР»С‘РЅРЅС‹Р№ РєРѕРЅС‚РµРєСЃС‚ СЃРѕС…СЂР°РЅС‘РЅ: {updated_context[:50]}...")
 
                 display_response_en = combined_response_en.replace(character_prompt, "")
-                logger.info(f"Ответ для вывода пользователю: {display_response_en[:50]}...")
+                logger.info(f"РћС‚РІРµС‚ РґР»СЏ РІС‹РІРѕРґР° РїРѕР»СЊР·РѕРІР°С‚РµР»СЋ: {display_response_en[:50]}...")
 
                 if ai_translate_enabled and is_english(display_response_en):
                     response_ru = translate_text(display_response_en, to_english=False)
                     if continue_only or text_en == "...":
                         full_response = (
-                            f"Ответ ИИ (на английском): {display_response_en}\n"
+                            f"РћС‚РІРµС‚ РР (РЅР° Р°РЅРіР»РёР№СЃРєРѕРј): {display_response_en}\n"
                             f"---\n"
-                            f"Перевод на русский: {response_ru}"
+                            f"РџРµСЂРµРІРѕРґ РЅР° СЂСѓСЃСЃРєРёР№: {response_ru}"
                         )
                     else:
                         full_response = (
-                            f"Перевод текста для ИИ на английский: {text_en}\n"
-                            f"Ответ ИИ (на английском): {display_response_en}\n"
+                            f"РџРµСЂРµРІРѕРґ С‚РµРєСЃС‚Р° РґР»СЏ РР РЅР° Р°РЅРіР»РёР№СЃРєРёР№: {text_en}\n"
+                            f"РћС‚РІРµС‚ РР (РЅР° Р°РЅРіР»РёР№СЃРєРѕРј): {display_response_en}\n"
                             f"---\n"
-                            f"Перевод на русский: {response_ru}"
+                            f"РџРµСЂРµРІРѕРґ РЅР° СЂСѓСЃСЃРєРёР№: {response_ru}"
                         )
                 else:
                     if continue_only or text_en == "...":
-                        full_response = f"Ответ ИИ (на английском): {display_response_en}"
+                        full_response = f"РћС‚РІРµС‚ РР (РЅР° Р°РЅРіР»РёР№СЃРєРѕРј): {display_response_en}"
                     else:
                         full_response = (
-                            f"Перевод текста для ИИ на английский: {text_en}\n"
-                            f"Ответ ИИ (на английском): {display_response_en}"
+                            f"РџРµСЂРµРІРѕРґ С‚РµРєСЃС‚Р° РґР»СЏ РР РЅР° Р°РЅРіР»РёР№СЃРєРёР№: {text_en}\n"
+                            f"РћС‚РІРµС‚ РР (РЅР° Р°РЅРіР»РёР№СЃРєРѕРј): {display_response_en}"
                         )
-                logger.info(f"Итоговый ответ: {full_response[:50]}...")
+                logger.info(f"РС‚РѕРіРѕРІС‹Р№ РѕС‚РІРµС‚: {full_response[:50]}...")
 
                 end_time = time.time()
                 response_time = end_time - start_time
                 save_response_time(chat_id, response_time)
-                logger.info(f"Генерация завершена за {response_time:.2f} сек")
+                logger.info(f"Р“РµРЅРµСЂР°С†РёСЏ Р·Р°РІРµСЂС€РµРЅР° Р·Р° {response_time:.2f} СЃРµРє")
 
                 return full_response, text_en, response_en_cleaned, character_name, character_prompt, response_time
 
         except asyncio.TimeoutError:
-            logger.error("Превышено время ожидания ответа от Kobold API")
+            logger.error("РџСЂРµРІС‹С€РµРЅРѕ РІСЂРµРјСЏ РѕР¶РёРґР°РЅРёСЏ РѕС‚РІРµС‚Р° РѕС‚ Kobold API")
             return (
-                f"Ошибка: превышено время ожидания ({config.get('timeout', 300)} сек). "
-                "Попробуйте снова или упростите запрос."
+                f"РћС€РёР±РєР°: РїСЂРµРІС‹С€РµРЅРѕ РІСЂРµРјСЏ РѕР¶РёРґР°РЅРёСЏ ({config.get('timeout', 300)} СЃРµРє). "
+                "РџРѕРїСЂРѕР±СѓР№С‚Рµ СЃРЅРѕРІР° РёР»Рё СѓРїСЂРѕСЃС‚РёС‚Рµ Р·Р°РїСЂРѕСЃ."
             ), text, "", character_name, character_prompt, 0.0
         except (aiohttp.ClientError, json.JSONDecodeError, ValueError) as e:
-            logger.error(f"Ошибка при запросе к Kobold API: {e}", exc_info=True)
-            return f"Ошибка: не удалось получить ответ от модели ({str(e)})", text, "", character_name, character_prompt, 0.0
+            logger.error(f"РћС€РёР±РєР° РїСЂРё Р·Р°РїСЂРѕСЃРµ Рє Kobold API: {e}", exc_info=True)
+            return f"РћС€РёР±РєР°: РЅРµ СѓРґР°Р»РѕСЃСЊ РїРѕР»СѓС‡РёС‚СЊ РѕС‚РІРµС‚ РѕС‚ РјРѕРґРµР»Рё ({str(e)})", text, "", character_name, character_prompt, 0.0
         except Exception as e:
-            logger.error(f"Неизвестная ошибка при запросе к Kobold API: {e}", exc_info=True)
-            return f"Ошибка: неизвестная проблема ({str(e)})", text, "", character_name, character_prompt, 0.0
+            logger.error(f"РќРµРёР·РІРµСЃС‚РЅР°СЏ РѕС€РёР±РєР° РїСЂРё Р·Р°РїСЂРѕСЃРµ Рє Kobold API: {e}", exc_info=True)
+            return f"РћС€РёР±РєР°: РЅРµРёР·РІРµСЃС‚РЅР°СЏ РїСЂРѕР±Р»РµРјР° ({str(e)})", text, "", character_name, character_prompt, 0.0

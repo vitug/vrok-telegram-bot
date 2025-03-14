@@ -9,7 +9,7 @@ from utils import (manage_config, init_db, load_context, save_context, clear_con
                   get_character_name, set_character_name, translate_text, is_english,
                   get_user_character_name, set_user_character_name, get_avg_response_time, temp_message_livetime)
 
-# Настройка логирования
+# РќР°СЃС‚СЂРѕР№РєР° Р»РѕРіРёСЂРѕРІР°РЅРёСЏ
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
@@ -22,17 +22,17 @@ logger = logging.getLogger(__name__)
 
 async def main():
     try:
-        logger.info("Запуск инициализации бота")
+        logger.info("Р—Р°РїСѓСЃРє РёРЅРёС†РёР°Р»РёР·Р°С†РёРё Р±РѕС‚Р°")
         config = manage_config()
         init_db()
         bot = AsyncTeleBot(config["telegram_token"])
-        logger.info("Бот инициализирован с токеном")
+        logger.info("Р‘РѕС‚ РёРЅРёС†РёР°Р»РёР·РёСЂРѕРІР°РЅ СЃ С‚РѕРєРµРЅРѕРј")
 
         async def polling_with_logging():
             try:
                 await bot.polling(none_stop=True)
             except Exception as e:
-                logger.error(f"Ошибка в polling: {e}", exc_info=True)
+                logger.error(f"РћС€РёР±РєР° РІ polling: {e}", exc_info=True)
                 await asyncio.sleep(5)
                 await polling_with_logging()
 
@@ -40,70 +40,70 @@ async def main():
         async def handle_start(message):
             chat_id = message.chat.id
             username = message.from_user.username or "Unknown"
-            logger.info(f"Получена команда /start от chat_id: {chat_id}, username: {username}")
-            await bot.reply_to(message, "Привет! Я Vrok, твой ИИ-ассистент. Используй команды или просто пиши мне.")
-            logger.info(f"Отправлен ответ на /start для chat_id: {chat_id}")
+            logger.info(f"РџРѕР»СѓС‡РµРЅР° РєРѕРјР°РЅРґР° /start РѕС‚ chat_id: {chat_id}, username: {username}")
+            await bot.reply_to(message, "РџСЂРёРІРµС‚! РЇ Vrok, С‚РІРѕР№ РР-Р°СЃСЃРёСЃС‚РµРЅС‚. РСЃРїРѕР»СЊР·СѓР№ РєРѕРјР°РЅРґС‹ РёР»Рё РїСЂРѕСЃС‚Рѕ РїРёС€Рё РјРЅРµ.")
+            logger.info(f"РћС‚РїСЂР°РІР»РµРЅ РѕС‚РІРµС‚ РЅР° /start РґР»СЏ chat_id: {chat_id}")
 
         @bot.message_handler(commands=['help'])
         async def handle_help(message):
             chat_id = message.chat.id
             username = message.from_user.username or "Unknown"
-            logger.info(f"Получена команда /help от chat_id: {chat_id}, username: {username}")
+            logger.info(f"РџРѕР»СѓС‡РµРЅР° РєРѕРјР°РЅРґР° /help РѕС‚ chat_id: {chat_id}, username: {username}")
             help_text = (
-                "Команды:\n"
-                "/start - Начать работу\n"
-                "/help - Показать помощь\n"
-                "/clear - Очистить контекст\n"
-                "/usertranslate - Вкл/выкл перевод запросов\n"
-                "/aitranslate - Вкл/выкл перевод ответов\n"
-                "/memory - Установить/показать memory\n"
-                "/character - Установить/показать имя персонажа\n"
-                "/usercharacter - Установить/показать имя пользователя\n"
-                "/continue - Продолжить последний контекст\n"
-                "/stats - Показать среднее время ответа\n"
-                "Добавь 'мдXXX' или 'mlXXX' (XXX - трёхзначное число до 512) в конец запроса для задания длины ответа."
+                "РљРѕРјР°РЅРґС‹:\n"
+                "/start - РќР°С‡Р°С‚СЊ СЂР°Р±РѕС‚Сѓ\n"
+                "/help - РџРѕРєР°Р·Р°С‚СЊ РїРѕРјРѕС‰СЊ\n"
+                "/clear - РћС‡РёСЃС‚РёС‚СЊ РєРѕРЅС‚РµРєСЃС‚\n"
+                "/usertranslate - Р’РєР»/РІС‹РєР» РїРµСЂРµРІРѕРґ Р·Р°РїСЂРѕСЃРѕРІ\n"
+                "/aitranslate - Р’РєР»/РІС‹РєР» РїРµСЂРµРІРѕРґ РѕС‚РІРµС‚РѕРІ\n"
+                "/memory - РЈСЃС‚Р°РЅРѕРІРёС‚СЊ/РїРѕРєР°Р·Р°С‚СЊ memory\n"
+                "/character - РЈСЃС‚Р°РЅРѕРІРёС‚СЊ/РїРѕРєР°Р·Р°С‚СЊ РёРјСЏ РїРµСЂСЃРѕРЅР°Р¶Р°\n"
+                "/usercharacter - РЈСЃС‚Р°РЅРѕРІРёС‚СЊ/РїРѕРєР°Р·Р°С‚СЊ РёРјСЏ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ\n"
+                "/continue - РџСЂРѕРґРѕР»Р¶РёС‚СЊ РїРѕСЃР»РµРґРЅРёР№ РєРѕРЅС‚РµРєСЃС‚\n"
+                "/stats - РџРѕРєР°Р·Р°С‚СЊ СЃСЂРµРґРЅРµРµ РІСЂРµРјСЏ РѕС‚РІРµС‚Р°\n"
+                "Р”РѕР±Р°РІСЊ 'РјРґXXX' РёР»Рё 'mlXXX' (XXX - С‚СЂС‘С…Р·РЅР°С‡РЅРѕРµ С‡РёСЃР»Рѕ РґРѕ 512) РІ РєРѕРЅРµС† Р·Р°РїСЂРѕСЃР° РґР»СЏ Р·Р°РґР°РЅРёСЏ РґР»РёРЅС‹ РѕС‚РІРµС‚Р°."
             )
             await bot.reply_to(message, help_text)
-            logger.info(f"Отправлен ответ на /help для chat_id: {chat_id}")
+            logger.info(f"РћС‚РїСЂР°РІР»РµРЅ РѕС‚РІРµС‚ РЅР° /help РґР»СЏ chat_id: {chat_id}")
 
         @bot.message_handler(commands=['clear'])
         async def handle_clear(message):
             chat_id = message.chat.id
             username = message.from_user.username or "Unknown"
-            logger.info(f"Получена команда /clear от chat_id: {chat_id}, username: {username}")
+            logger.info(f"РџРѕР»СѓС‡РµРЅР° РєРѕРјР°РЅРґР° /clear РѕС‚ chat_id: {chat_id}, username: {username}")
             clear_context(chat_id)
-            await bot.reply_to(message, "Контекст очищен.")
-            logger.info(f"Контекст очищен для chat_id: {chat_id}")
+            await bot.reply_to(message, "РљРѕРЅС‚РµРєСЃС‚ РѕС‡РёС‰РµРЅ.")
+            logger.info(f"РљРѕРЅС‚РµРєСЃС‚ РѕС‡РёС‰РµРЅ РґР»СЏ chat_id: {chat_id}")
 
         @bot.message_handler(commands=['usertranslate'])
         async def handle_usertranslate(message):
             chat_id = message.chat.id
             username = message.from_user.username or "Unknown"
-            logger.info(f"Получена команда /usertranslate от chat_id: {chat_id}, username: {username}")
+            logger.info(f"РџРѕР»СѓС‡РµРЅР° РєРѕРјР°РЅРґР° /usertranslate РѕС‚ chat_id: {chat_id}, username: {username}")
             current_state = get_user_translate_enabled(chat_id)
             new_state = not current_state
             set_user_translate_enabled(chat_id, new_state)
-            state_text = "включён" if new_state else "выключен"
-            await bot.reply_to(message, f"Перевод запросов {state_text}.")
-            logger.info(f"Перевод запросов установлен в {state_text} для chat_id: {chat_id}")
+            state_text = "РІРєР»СЋС‡С‘РЅ" if new_state else "РІС‹РєР»СЋС‡РµРЅ"
+            await bot.reply_to(message, f"РџРµСЂРµРІРѕРґ Р·Р°РїСЂРѕСЃРѕРІ {state_text}.")
+            logger.info(f"РџРµСЂРµРІРѕРґ Р·Р°РїСЂРѕСЃРѕРІ СѓСЃС‚Р°РЅРѕРІР»РµРЅ РІ {state_text} РґР»СЏ chat_id: {chat_id}")
 
         @bot.message_handler(commands=['aitranslate'])
         async def handle_aitranslate(message):
             chat_id = message.chat.id
             username = message.from_user.username or "Unknown"
-            logger.info(f"Получена команда /aitranslate от chat_id: {chat_id}, username: {username}")
+            logger.info(f"РџРѕР»СѓС‡РµРЅР° РєРѕРјР°РЅРґР° /aitranslate РѕС‚ chat_id: {chat_id}, username: {username}")
             current_state = get_ai_translate_enabled(chat_id)
             new_state = not current_state
             set_ai_translate_enabled(chat_id, new_state)
-            state_text = "включён" if new_state else "выключен"
-            await bot.reply_to(message, f"Перевод ответов {state_text}.")
-            logger.info(f"Перевод ответов установлен в {state_text} для chat_id: {chat_id}")
+            state_text = "РІРєР»СЋС‡С‘РЅ" if new_state else "РІС‹РєР»СЋС‡РµРЅ"
+            await bot.reply_to(message, f"РџРµСЂРµРІРѕРґ РѕС‚РІРµС‚РѕРІ {state_text}.")
+            logger.info(f"РџРµСЂРµРІРѕРґ РѕС‚РІРµС‚РѕРІ СѓСЃС‚Р°РЅРѕРІР»РµРЅ РІ {state_text} РґР»СЏ chat_id: {chat_id}")
 
         @bot.message_handler(commands=['memory'])
         async def handle_memory(message):
             chat_id = message.chat.id
             username = message.from_user.username or "Unknown"
-            logger.info(f"Получена команда /memory от chat_id: {chat_id}, username: {username}")
+            logger.info(f"РџРѕР»СѓС‡РµРЅР° РєРѕРјР°РЅРґР° /memory РѕС‚ chat_id: {chat_id}, username: {username}")
             command_text = message.text.strip()
 
             memory_input = command_text[len("/memory"):].strip()
@@ -114,20 +114,20 @@ async def main():
                 else:
                     memory_en = memory_input
                 set_memory(chat_id, memory_en)
-                await bot.reply_to(message, f"Установлено новое memory: {memory_en}")
-                logger.info(f"Установлено новое memory: {memory_en[:50]}... для chat_id: {chat_id}")
+                await bot.reply_to(message, f"РЈСЃС‚Р°РЅРѕРІР»РµРЅРѕ РЅРѕРІРѕРµ memory: {memory_en}")
+                logger.info(f"РЈСЃС‚Р°РЅРѕРІР»РµРЅРѕ РЅРѕРІРѕРµ memory: {memory_en[:50]}... РґР»СЏ chat_id: {chat_id}")
             else:
                 current_memory = get_memory(chat_id)
                 if not current_memory:
                     current_memory = "You are a cheerful AI, always responding with a bit of humor."
-                await bot.reply_to(message, f"Текущее memory: {current_memory}")
-                logger.info(f"Отправлено текущее memory: {current_memory[:50]}... для chat_id: {chat_id}")
+                await bot.reply_to(message, f"РўРµРєСѓС‰РµРµ memory: {current_memory}")
+                logger.info(f"РћС‚РїСЂР°РІР»РµРЅРѕ С‚РµРєСѓС‰РµРµ memory: {current_memory[:50]}... РґР»СЏ chat_id: {chat_id}")
 
         @bot.message_handler(commands=['character'])
         async def handle_character(message):
             chat_id = message.chat.id
             username = message.from_user.username or "Unknown"
-            logger.info(f"Получена команда /character от chat_id: {chat_id}, username: {username}")
+            logger.info(f"РџРѕР»СѓС‡РµРЅР° РєРѕРјР°РЅРґР° /character РѕС‚ chat_id: {chat_id}, username: {username}")
             command_text = message.text.strip()
 
             character_input = command_text[len("/character"):].strip()
@@ -135,22 +135,22 @@ async def main():
                 user_translate_enabled = get_user_translate_enabled(chat_id)
                 if user_translate_enabled and not is_english(character_input):
                     character_name_en = translate_text(character_input, to_english=True)
-                    logger.info(f"Имя персонажа переведено на английский: {character_name_en}")
+                    logger.info(f"РРјСЏ РїРµСЂСЃРѕРЅР°Р¶Р° РїРµСЂРµРІРµРґРµРЅРѕ РЅР° Р°РЅРіР»РёР№СЃРєРёР№: {character_name_en}")
                 else:
                     character_name_en = character_input
                 set_character_name(chat_id, character_name_en)
-                await bot.reply_to(message, f"Установлено новое имя персонажа: {character_name_en}")
-                logger.info(f"Установлено имя персонажа: {character_name_en} для chat_id: {chat_id}")
+                await bot.reply_to(message, f"РЈСЃС‚Р°РЅРѕРІР»РµРЅРѕ РЅРѕРІРѕРµ РёРјСЏ РїРµСЂСЃРѕРЅР°Р¶Р°: {character_name_en}")
+                logger.info(f"РЈСЃС‚Р°РЅРѕРІР»РµРЅРѕ РёРјСЏ РїРµСЂСЃРѕРЅР°Р¶Р°: {character_name_en} РґР»СЏ chat_id: {chat_id}")
             else:
                 current_character = get_character_name(chat_id)
-                await bot.reply_to(message, f"Текущее имя персонажа: {current_character}")
-                logger.info(f"Отправлено текущее имя персонажа: {current_character} для chat_id: {chat_id}")
+                await bot.reply_to(message, f"РўРµРєСѓС‰РµРµ РёРјСЏ РїРµСЂСЃРѕРЅР°Р¶Р°: {current_character}")
+                logger.info(f"РћС‚РїСЂР°РІР»РµРЅРѕ С‚РµРєСѓС‰РµРµ РёРјСЏ РїРµСЂСЃРѕРЅР°Р¶Р°: {current_character} РґР»СЏ chat_id: {chat_id}")
 
         @bot.message_handler(commands=['usercharacter'])
         async def handle_user_character(message):
             chat_id = message.chat.id
             username = message.from_user.username or "Unknown"
-            logger.info(f"Получена команда /usercharacter от chat_id: {chat_id}, username: {username}")
+            logger.info(f"РџРѕР»СѓС‡РµРЅР° РєРѕРјР°РЅРґР° /usercharacter РѕС‚ chat_id: {chat_id}, username: {username}")
             command_text = message.text.strip()
 
             user_character_input = command_text[len("/usercharacter"):].strip()
@@ -158,26 +158,26 @@ async def main():
                 user_translate_enabled = get_user_translate_enabled(chat_id)
                 if user_translate_enabled and not is_english(user_character_input):
                     user_character_name_en = translate_text(user_character_input, to_english=True)
-                    logger.info(f"Имя пользователя переведено на английский: {user_character_name_en}")
+                    logger.info(f"РРјСЏ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ РїРµСЂРµРІРµРґРµРЅРѕ РЅР° Р°РЅРіР»РёР№СЃРєРёР№: {user_character_name_en}")
                 else:
                     user_character_name_en = user_character_input
                 set_user_character_name(chat_id, user_character_name_en)
-                await bot.reply_to(message, f"Установлено новое имя пользователя: {user_character_name_en}: ")
-                logger.info(f"Установлено имя пользователя: {user_character_name_en} для chat_id: {chat_id}")
+                await bot.reply_to(message, f"РЈСЃС‚Р°РЅРѕРІР»РµРЅРѕ РЅРѕРІРѕРµ РёРјСЏ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ: {user_character_name_en}: ")
+                logger.info(f"РЈСЃС‚Р°РЅРѕРІР»РµРЅРѕ РёРјСЏ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ: {user_character_name_en} РґР»СЏ chat_id: {chat_id}")
             else:
                 current_user_character = get_user_character_name(chat_id)
-                await bot.reply_to(message, f"Текущее имя пользователя: {current_user_character}: ")
-                logger.info(f"Отправлено текущее имя пользователя: {current_user_character} для chat_id: {chat_id}")
+                await bot.reply_to(message, f"РўРµРєСѓС‰РµРµ РёРјСЏ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ: {current_user_character}: ")
+                logger.info(f"РћС‚РїСЂР°РІР»РµРЅРѕ С‚РµРєСѓС‰РµРµ РёРјСЏ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ: {current_user_character} РґР»СЏ chat_id: {chat_id}")
 
         @bot.message_handler(commands=['continue'])
         async def handle_continue(message):
             chat_id = message.chat.id
             username = message.from_user.username or "Unknown"
-            logger.info(f"Получена команда /continue от chat_id: {chat_id}, username: {username}")
+            logger.info(f"РџРѕР»СѓС‡РµРЅР° РєРѕРјР°РЅРґР° /continue РѕС‚ chat_id: {chat_id}, username: {username}")
             context = load_context(chat_id)
             if not context:
-                await bot.reply_to(message, "Контекст пуст. Начните с обычного сообщения.")
-                logger.info(f"Контекст пуст для chat_id: {chat_id}")
+                await bot.reply_to(message, "РљРѕРЅС‚РµРєСЃС‚ РїСѓСЃС‚. РќР°С‡РЅРёС‚Рµ СЃ РѕР±С‹С‡РЅРѕРіРѕ СЃРѕРѕР±С‰РµРЅРёСЏ.")
+                logger.info(f"РљРѕРЅС‚РµРєСЃС‚ РїСѓСЃС‚ РґР»СЏ chat_id: {chat_id}")
                 return
 
             response, _, _, _, _, response_time = await generate_response_async(
@@ -188,36 +188,36 @@ async def main():
             )
             for part in split_message(response):
                 await bot.reply_to(message, part)
-            logger.info(f"Отправлен ответ на /continue для chat_id: {chat_id}")
+            logger.info(f"РћС‚РїСЂР°РІР»РµРЅ РѕС‚РІРµС‚ РЅР° /continue РґР»СЏ chat_id: {chat_id}")
             temp_message = await bot.send_message(
                 chat_id=message.chat.id,
-                text=f"Генерация завершена за {response_time:.2f} сек"
+                text=f"Р“РµРЅРµСЂР°С†РёСЏ Р·Р°РІРµСЂС€РµРЅР° Р·Р° {response_time:.2f} СЃРµРє"
             )
-            logger.info(f"Отправлено временное сообщение о завершении в chat_id: {chat_id}, message_id: {temp_message.message_id}")
+            logger.info(f"РћС‚РїСЂР°РІР»РµРЅРѕ РІСЂРµРјРµРЅРЅРѕРµ СЃРѕРѕР±С‰РµРЅРёРµ Рѕ Р·Р°РІРµСЂС€РµРЅРёРё РІ chat_id: {chat_id}, message_id: {temp_message.message_id}")
             await asyncio.sleep(temp_message_livetime(config))
             try:
                 await bot.delete_message(chat_id=message.chat.id, message_id=temp_message.message_id)
-                logger.info(f"Временное сообщение удалено в chat_id: {chat_id}, message_id: {temp_message.message_id}")
+                logger.info(f"Р’СЂРµРјРµРЅРЅРѕРµ СЃРѕРѕР±С‰РµРЅРёРµ СѓРґР°Р»РµРЅРѕ РІ chat_id: {chat_id}, message_id: {temp_message.message_id}")
             except Exception as e:
-                logger.warning(f"Не удалось удалить временное сообщение: {e}")
+                logger.warning(f"РќРµ СѓРґР°Р»РѕСЃСЊ СѓРґР°Р»РёС‚СЊ РІСЂРµРјРµРЅРЅРѕРµ СЃРѕРѕР±С‰РµРЅРёРµ: {e}")
 
         @bot.message_handler(commands=['stats'])
         async def handle_stats(message):
             chat_id = message.chat.id
             username = message.from_user.username or "Unknown"
-            logger.info(f"Получена команда /stats от chat_id: {chat_id}, username: {username}")
+            logger.info(f"РџРѕР»СѓС‡РµРЅР° РєРѕРјР°РЅРґР° /stats РѕС‚ chat_id: {chat_id}, username: {username}")
             avg_time = get_avg_response_time(chat_id)
             if avg_time is None:
-                await bot.reply_to(message, "Нет данных о времени ответа.")
+                await bot.reply_to(message, "РќРµС‚ РґР°РЅРЅС‹С… Рѕ РІСЂРµРјРµРЅРё РѕС‚РІРµС‚Р°.")
             else:
-                await bot.reply_to(message, f"Среднее время ответа: {avg_time:.2f} сек")
-            logger.info(f"Отправлена статистика для chat_id: {chat_id}")
+                await bot.reply_to(message, f"РЎСЂРµРґРЅРµРµ РІСЂРµРјСЏ РѕС‚РІРµС‚Р°: {avg_time:.2f} СЃРµРє")
+            logger.info(f"РћС‚РїСЂР°РІР»РµРЅР° СЃС‚Р°С‚РёСЃС‚РёРєР° РґР»СЏ chat_id: {chat_id}")
 
         @bot.message_handler(func=lambda message: True)
         async def handle_message(message):
             chat_id = message.chat.id
             username = message.from_user.username or "Unknown"
-            logger.info(f"Получено сообщение от chat_id: {chat_id}, username: {username}, текст: {message.text[:50]}...")
+            logger.info(f"РџРѕР»СѓС‡РµРЅРѕ СЃРѕРѕР±С‰РµРЅРёРµ РѕС‚ chat_id: {chat_id}, username: {username}, С‚РµРєСЃС‚: {message.text[:50]}...")
             context = load_context(chat_id)
             response, _, _, _, _, response_time = await generate_response_async(
                 message.text, config, chat_id, context=context,
@@ -226,27 +226,27 @@ async def main():
             )
             for part in split_message(response):
                 await bot.reply_to(message, part)
-            logger.info(f"Отправлен ответ для chat_id: {chat_id}")
+            logger.info(f"РћС‚РїСЂР°РІР»РµРЅ РѕС‚РІРµС‚ РґР»СЏ chat_id: {chat_id}")
             temp_message = await bot.send_message(
                 chat_id=message.chat.id,
-                text=f"Генерация завершена за {response_time:.2f} сек"
+                text=f"Р“РµРЅРµСЂР°С†РёСЏ Р·Р°РІРµСЂС€РµРЅР° Р·Р° {response_time:.2f} СЃРµРє"
             )
-            logger.info(f"Отправлено временное сообщение о завершении в chat_id: {chat_id}, message_id: {temp_message.message_id}")
+            logger.info(f"РћС‚РїСЂР°РІР»РµРЅРѕ РІСЂРµРјРµРЅРЅРѕРµ СЃРѕРѕР±С‰РµРЅРёРµ Рѕ Р·Р°РІРµСЂС€РµРЅРёРё РІ chat_id: {chat_id}, message_id: {temp_message.message_id}")
             await asyncio.sleep(temp_message_livetime(config))
             try:
                 await bot.delete_message(chat_id=message.chat.id, message_id=temp_message.message_id)
-                logger.info(f"Временное сообщение удалено в chat_id: {chat_id}, message_id: {temp_message.message_id}")
+                logger.info(f"Р’СЂРµРјРµРЅРЅРѕРµ СЃРѕРѕР±С‰РµРЅРёРµ СѓРґР°Р»РµРЅРѕ РІ chat_id: {chat_id}, message_id: {temp_message.message_id}")
             except Exception as e:
-                logger.warning(f"Не удалось удалить временное сообщение: {e}")
+                logger.warning(f"РќРµ СѓРґР°Р»РѕСЃСЊ СѓРґР°Р»РёС‚СЊ РІСЂРµРјРµРЅРЅРѕРµ СЃРѕРѕР±С‰РµРЅРёРµ: {e}")
 
-        logger.info("Запуск polling")
+        logger.info("Р—Р°РїСѓСЃРє polling")
         await polling_with_logging()
 
     except Exception as e:
-        logger.error(f"Критическая ошибка в main: {e}", exc_info=True)
+        logger.error(f"РљСЂРёС‚РёС‡РµСЃРєР°СЏ РѕС€РёР±РєР° РІ main: {e}", exc_info=True)
         raise
 
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
-    logger.info("Запуск бота с явным циклом событий")
+    logger.info("Р—Р°РїСѓСЃРє Р±РѕС‚Р° СЃ СЏРІРЅС‹Рј С†РёРєР»РѕРј СЃРѕР±С‹С‚РёР№")
     loop.run_until_complete(main())
