@@ -9,6 +9,9 @@ from utils import (manage_config, init_db, load_context, save_context, clear_con
                   get_character_name, set_character_name, translate_text, is_english,
                   get_user_character_name, set_user_character_name, get_avg_response_time, temp_message_livetime)
 
+# При ошибке SSL: CERTIFICATE_VERIFY_FAILED certificate verify failed: unable to get local issuer certificate (_ssl.c:1129)')
+# pip install pip-system-certs
+
 # Настройка логирования
 logging.basicConfig(
     level=logging.INFO,
@@ -28,55 +31,60 @@ async def main():
         bot = AsyncTeleBot(config["telegram_token"])
         logger.info("Бот инициализирован с токеном")
 
+        # Добавляем обработчик исключений для polling
         async def polling_with_logging():
             try:
+                logger.info("Начинаем polling")
                 await bot.polling(none_stop=True)
             except Exception as e:
                 logger.error(f"Ошибка в polling: {e}", exc_info=True)
-                await asyncio.sleep(5)
-                await polling_with_logging()
+                raise
 
         @bot.message_handler(commands=['start'])
         async def handle_start(message):
             chat_id = message.chat.id
             username = message.from_user.username or "Unknown"
             logger.info(f"Получена команда /start от chat_id: {chat_id}, username: {username}")
-            await bot.reply_to(message, "Привет! Я Vrok, твой ИИ-ассистент. Используй команды или просто пиши мне.")
-            logger.info(f"Отправлен ответ на /start для chat_id: {chat_id}")
+            await bot.reply_to(message, "Привет! Я Врок, весёлый ИИ. Напиши что-нибудь, и я отвечу с юмором!\n"
+                                       "Для списка команд используй /help.")
+            logger.info(f"Отправлено приветственное сообщение в chat_id: {chat_id}")
 
         @bot.message_handler(commands=['help'])
         async def handle_help(message):
             chat_id = message.chat.id
-            username = message.from_user.username or "Unknown"
-            logger.info(f"Получена команда /help от chat_id: {chat_id}, username: {username}")
+            logger.info(f"Получена команда /help от chat_id: {chat_id}")
             help_text = (
-                "Команды:\n"
-                "/start - Начать работу\n"
-                "/help - Показать помощь\n"
-                "/clear - Очистить контекст\n"
-                "/usertranslate - Вкл/выкл перевод запросов\n"
-                "/aitranslate - Вкл/выкл перевод ответов\n"
-                "/memory - Установить/показать memory\n"
-                "/character - Установить/показать имя персонажа\n"
-                "/usercharacter - Установить/показать имя пользователя\n"
-                "/continue - Продолжить последний контекст\n"
-                "/stats - Показать среднее время ответа\n"
-                "Добавь 'мдXXX' или 'mlXXX' (XXX - трёхзначное число до 512) в конец запроса для задания длины ответа."
+                "Вот список доступных команд:\n"
+                "/start — Запустить бота и получить приветствие.\n"
+                "/help — Показать это сообщение со списком команд.\n"
+                "/clear — Очистить контекст разговора.\n"
+                "/continue — Продолжить текущую историю без нового ввода.\n"
+                "/usertranslate — Включить/выключить перевод ваших сообщений на английский перед отправкой ИИ.\n"
+                "/aitranslate — Включить/выключить перевод ответов ИИ на русский.\n"
+                "/memory [текст] — Задать или посмотреть memory для ИИ (инструкцию о его поведении).\n"
+                "/character [имя] — Задать или посмотреть имя персонажа (по умолчанию 'Person').\n"
+                "/usercharacter [имя] — Задать или посмотреть имя пользователя (по умолчанию 'User'). Пробел и двоеточие добавляются автоматически.\n"
+                "Просто текст — Отправить сообщение ИИ, он ответит с учётом текущих настроек.\n"
+                "... — Продолжить историю без явного ввода."
             )
             await bot.reply_to(message, help_text)
-            logger.info(f"Отправлен ответ на /help для chat_id: {chat_id}")
+            logger.info(f"Отправлен текст помощи в chat_id: {chat_id}")
 
         @bot.message_handler(commands=['clear'])
         async def handle_clear(message):
             chat_id = message.chat.id
-            username = message.from_user.username or "Unknown"
-            logger.info(f"Получена команда /clear от chat_id: {chat_id}, username: {username}")
+            logger.info(f"Получена команда /clear от chat_id: {chat_id}")
+            status_message = await bot.reply_to(message, "Очищаю контекст...")
             clear_context(chat_id)
-            await bot.reply_to(message, "Контекст очищен.")
-            logger.info(f"Контекст очищен для chat_id: {chat_id}")
+            await bot.edit_message_text(
+                text="Контекст успешно очищен! Можете начать новый разговор.",
+                chat_id=message.chat.id,
+                message_id=status_message.message_id
+            )
+            logger.info(f"Контекст очищен и сообщение обновлено для chat_id: {chat_id}")
 
         @bot.message_handler(commands=['usertranslate'])
-        async def handle_usertranslate(message):
+        async def handle_user_translate(message):
             chat_id = message.chat.id
             username = message.from_user.username or "Unknown"
             logger.info(f"Получена команда /usertranslate от chat_id: {chat_id}, username: {username}")
@@ -84,11 +92,11 @@ async def main():
             new_state = not current_state
             set_user_translate_enabled(chat_id, new_state)
             state_text = "включён" if new_state else "выключен"
-            await bot.reply_to(message, f"Перевод запросов {state_text}.")
-            logger.info(f"Перевод запросов установлен в {state_text} для chat_id: {chat_id}")
+            await bot.reply_to(message, f"Перевод сообщений пользователя на английский теперь {state_text}.")
+            logger.info(f"Перевод сообщений пользователя {state_text} для chat_id: {chat_id}")
 
         @bot.message_handler(commands=['aitranslate'])
-        async def handle_aitranslate(message):
+        async def handle_ai_translate(message):
             chat_id = message.chat.id
             username = message.from_user.username or "Unknown"
             logger.info(f"Получена команда /aitranslate от chat_id: {chat_id}, username: {username}")
@@ -96,8 +104,8 @@ async def main():
             new_state = not current_state
             set_ai_translate_enabled(chat_id, new_state)
             state_text = "включён" if new_state else "выключен"
-            await bot.reply_to(message, f"Перевод ответов {state_text}.")
-            logger.info(f"Перевод ответов установлен в {state_text} для chat_id: {chat_id}")
+            await bot.reply_to(message, f"Перевод ответов ИИ на русский теперь {state_text}.")
+            logger.info(f"Перевод ответов ИИ {state_text} для chat_id: {chat_id}")
 
         @bot.message_handler(commands=['memory'])
         async def handle_memory(message):
@@ -119,7 +127,7 @@ async def main():
             else:
                 current_memory = get_memory(chat_id)
                 if not current_memory:
-                    current_memory = "You are a cheerful AI, always responding with a bit of humor."
+                    current_memory = "You are a cheerful AI named Grok, always responding with a bit of humor."
                 await bot.reply_to(message, f"Текущее memory: {current_memory}")
                 logger.info(f"Отправлено текущее memory: {current_memory[:50]}... для chat_id: {chat_id}")
 
@@ -132,8 +140,10 @@ async def main():
 
             character_input = command_text[len("/character"):].strip()
             if character_input:
+                # Проверяем, включён ли перевод запросов
                 user_translate_enabled = get_user_translate_enabled(chat_id)
                 if user_translate_enabled and not is_english(character_input):
+                    # Переводим имя персонажа на английский, если оно не на английском
                     character_name_en = translate_text(character_input, to_english=True)
                     logger.info(f"Имя персонажа переведено на английский: {character_name_en}")
                 else:
@@ -155,8 +165,10 @@ async def main():
 
             user_character_input = command_text[len("/usercharacter"):].strip()
             if user_character_input:
+                # Проверяем, включён ли перевод запросов
                 user_translate_enabled = get_user_translate_enabled(chat_id)
                 if user_translate_enabled and not is_english(user_character_input):
+                    # Переводим имя пользователя на английский, если оно не на английском
                     user_character_name_en = translate_text(user_character_input, to_english=True)
                     logger.info(f"Имя пользователя переведено на английский: {user_character_name_en}")
                 else:
@@ -172,28 +184,47 @@ async def main():
         @bot.message_handler(commands=['continue'])
         async def handle_continue(message):
             chat_id = message.chat.id
-            username = message.from_user.username or "Unknown"
-            logger.info(f"Получена команда /continue от chat_id: {chat_id}, username: {username}")
+            logger.info(f"Получена команда /continue от chat_id: {chat_id}")
             context = load_context(chat_id)
+            logger.info(f"Загружен контекст: {context[:100]}...")
             if not context:
-                await bot.reply_to(message, "Контекст пуст. Начните с обычного сообщения.")
-                logger.info(f"Контекст пуст для chat_id: {chat_id}")
-                return
+                context = config["system_prompt"]
+                logger.info("Используется системный промпт как контекст")
 
-            response, _, _, _, _, response_time = await generate_response_async(
-                "...", config, chat_id, context=context,
-                user_translate_enabled=get_user_translate_enabled(chat_id),
-                ai_translate_enabled=get_ai_translate_enabled(chat_id),
-                continue_only=True
+            # Получаем среднее время генерации
+            avg_time, count = get_avg_response_time(chat_id)
+            status_text = "Продолжаю историю, пожалуйста, подождите..."
+            if avg_time:
+                status_text += f"\nСреднее время ответа: {avg_time:.2f} сек (на основе {count} предыдущих ответов)"
+
+            status_message = await bot.reply_to(message, status_text)
+            logger.info(f"Отправлено сообщение о статусе в chat_id: {chat_id}, message_id: {status_message.message_id}")
+            ai_response, text_en, response_en, character_name, character_prompt, response_time = await generate_response_async(
+                "", config, chat_id, context, get_user_translate_enabled(chat_id), get_ai_translate_enabled(chat_id), continue_only=True
             )
-            for part in split_message(response):
-                await bot.reply_to(message, part)
-            logger.info(f"Отправлен ответ на /continue для chat_id: {chat_id}")
+            logger.info(f"Сгенерирован ответ: {ai_response[:100]}...")
+
+            # Контекст обновляется в generate_response_async, здесь только отправляем ответ
+            message_parts = split_message(ai_response)
+            logger.info(f"Сообщение разбито на {len(message_parts)} частей: {message_parts[0][:50]}...")
+            await bot.edit_message_text(
+                text=message_parts[0],
+                chat_id=message.chat.id,
+                message_id=status_message.message_id
+            )
+            logger.info(f"Сообщение статуса отредактировано для chat_id: {chat_id}")
+            for part in message_parts[1:]:
+                await bot.send_message(chat_id=message.chat.id, text=part)
+                logger.info(f"Отправлена дополнительная часть в chat_id: {chat_id}")
+
+            # Отправляем временное сообщение о завершении генерации
             temp_message = await bot.send_message(
                 chat_id=message.chat.id,
                 text=f"Генерация завершена за {response_time:.2f} сек"
             )
             logger.info(f"Отправлено временное сообщение о завершении в chat_id: {chat_id}, message_id: {temp_message.message_id}")
+            
+            # Удаляем сообщение через temp_message_livetime секунд
             await asyncio.sleep(temp_message_livetime(config))
             try:
                 await bot.delete_message(chat_id=message.chat.id, message_id=temp_message.message_id)
@@ -201,37 +232,57 @@ async def main():
             except Exception as e:
                 logger.warning(f"Не удалось удалить временное сообщение: {e}")
 
-        @bot.message_handler(commands=['stats'])
-        async def handle_stats(message):
-            chat_id = message.chat.id
-            username = message.from_user.username or "Unknown"
-            logger.info(f"Получена команда /stats от chat_id: {chat_id}, username: {username}")
-            avg_time = get_avg_response_time(chat_id)
-            if avg_time is None:
-                await bot.reply_to(message, "Нет данных о времени ответа.")
-            else:
-                await bot.reply_to(message, f"Среднее время ответа: {avg_time:.2f} сек")
-            logger.info(f"Отправлена статистика для chat_id: {chat_id}")
-
-        @bot.message_handler(func=lambda message: True)
+        @bot.message_handler(content_types=['text'])
         async def handle_message(message):
             chat_id = message.chat.id
-            username = message.from_user.username or "Unknown"
-            logger.info(f"Получено сообщение от chat_id: {chat_id}, username: {username}, текст: {message.text[:50]}...")
+            user_message = message.text
+            logger.info(f"Получено текстовое сообщение от chat_id: {chat_id}: {user_message[:50]}...")
+            if user_message.startswith('/'):
+                logger.info("Пропуск сообщения, похожего на команду")
+                return
+
             context = load_context(chat_id)
-            response, _, _, _, _, response_time = await generate_response_async(
-                message.text, config, chat_id, context=context,
-                user_translate_enabled=get_user_translate_enabled(chat_id),
-                ai_translate_enabled=get_ai_translate_enabled(chat_id)
+            if not context:
+                context = config["system_prompt"]
+                logger.info("Используется системный промпт как контекст")
+            else:
+                logger.info(f"Загружен контекст: {context[:100]}...")
+
+            # Получаем среднее время генерации
+            avg_time, count = get_avg_response_time(chat_id)
+            status_text = "Генерирую ответ, пожалуйста, подождите..."
+            if avg_time:
+                status_text += f"\nСреднее время ответа: {avg_time:.2f} сек (на основе {count} предыдущих ответов)"
+
+            status_message = await bot.reply_to(message, status_text)
+            logger.info(f"Отправлено сообщение о статусе в chat_id: {chat_id}, message_id: {status_message.message_id}")
+            
+            ai_response, text_en, response_en, character_name, character_prompt, response_time = await generate_response_async(
+                user_message, config, chat_id, context, get_user_translate_enabled(chat_id), get_ai_translate_enabled(chat_id)
             )
-            for part in split_message(response):
-                await bot.reply_to(message, part)
-            logger.info(f"Отправлен ответ для chat_id: {chat_id}")
+            logger.info(f"Сгенерирован ответ: {ai_response[:100]}...")
+
+            # Отправляем основной ответ
+            message_parts = split_message(ai_response)
+            logger.info(f"Сообщение разбито на {len(message_parts)} частей: {message_parts[0][:50]}...")
+            await bot.edit_message_text(
+                text=message_parts[0],
+                chat_id=message.chat.id,
+                message_id=status_message.message_id
+            )
+            logger.info(f"Сообщение статуса отредактировано для chat_id: {chat_id}")
+            for part in message_parts[1:]:
+                await bot.send_message(chat_id=message.chat.id, text=part)
+                logger.info(f"Отправлена дополнительная часть в chat_id: {chat_id}")
+
+            # Отправляем временное сообщение о завершении генерации
             temp_message = await bot.send_message(
                 chat_id=message.chat.id,
                 text=f"Генерация завершена за {response_time:.2f} сек"
             )
             logger.info(f"Отправлено временное сообщение о завершении в chat_id: {chat_id}, message_id: {temp_message.message_id}")
+            
+            # Удаляем сообщение через temp_message_livetime секунд
             await asyncio.sleep(temp_message_livetime(config))
             try:
                 await bot.delete_message(chat_id=message.chat.id, message_id=temp_message.message_id)
@@ -239,8 +290,10 @@ async def main():
             except Exception as e:
                 logger.warning(f"Не удалось удалить временное сообщение: {e}")
 
+        # (Остальной код остаётся без изменений)
+
         logger.info("Запуск polling")
-        await polling_with_logging()
+        await bot.polling(none_stop=True)
 
     except Exception as e:
         logger.error(f"Критическая ошибка в main: {e}", exc_info=True)
