@@ -15,6 +15,27 @@ import asyncio
 import tempfile
 import os
 
+# Разделители для системного промпта
+SYSTEM_PROMPT_START = "###SYSTEM_PROMPT_START###"
+SYSTEM_PROMPT_END = "###SYSTEM_PROMPT_END###"
+
+def add_system_prompt(prompt):
+    """Добавляет системный промпт, окружённый разделителями."""
+    return f"{SYSTEM_PROMPT_START}{prompt}{SYSTEM_PROMPT_END}"
+
+def remove_system_prompt(context):
+    """Удаляет системный промпт, окружённый разделителями, из контекста."""
+    start_marker = SYSTEM_PROMPT_START
+    end_marker = SYSTEM_PROMPT_END
+    start_idx = context.find(start_marker)
+    if start_idx != -1:
+        end_idx = context.find(end_marker, start_idx + len(start_marker))
+        if end_idx != -1:
+            cleaned_context = context[:start_idx] + context[end_idx + len(end_marker):]
+            logger.info(f"Удалён системный промпт из контекста: {context[start_idx:end_idx + len(end_marker)]}")
+            return cleaned_context.strip()
+    return context.strip()
+
 # Основной логгер (уже есть в коде)
 logging.basicConfig(
     level=logging.INFO,
@@ -308,6 +329,7 @@ def get_avg_response_time(chat_id, db_file="context.db"):
 
 def manage_config(config_file="config.json"):
     logger.info(f"Управление конфигурацией: {config_file}")
+
 def manage_config(config_file="config.json"):
     default_config = {
         "telegram_token": "YOUR_TELEGRAM_BOT_TOKEN",
@@ -403,12 +425,7 @@ def save_context_to_file(chat_id, config, db_file="context.db"):
         return None
     
     # Удаляем системный промпт из начала контекста, если он там есть
-    system_prompt = config["system_prompt"]
-    if context.startswith(system_prompt):
-        cleaned_context = context[len(system_prompt):].strip()
-    else:
-        cleaned_context = context.strip()
-    
+    cleaned_context = remove_system_prompt(context)
     if not cleaned_context:
         logger.info("Контекст после удаления системного промпта пуст, возвращаем None")
         return None
@@ -464,7 +481,7 @@ async def generate_response_async(text, config, chat_id, context="", user_transl
         text_en = text
         logger.info(f"Текст используется как есть: {text_en[:50]}...")
 
-    context_en = context if context else config["system_prompt"]
+    context_en = context if context else add_system_prompt(config["system_prompt"])
     logger.info(f"Контекст: {context_en[:50]}...")
     character_name = get_character_name(chat_id)
     user_character_name = get_user_character_name(chat_id)

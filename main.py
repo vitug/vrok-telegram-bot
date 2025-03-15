@@ -9,7 +9,7 @@ from utils import (manage_config, init_db, load_context, save_context, clear_con
                   get_memory, set_memory, generate_response_async, split_message,
                   get_character_name, set_character_name, translate_text, is_english,
                   get_user_character_name, set_user_character_name, get_avg_response_time, temp_message_livetime,
-                  save_context_to_file)
+                  save_context_to_file, add_system_prompt, remove_system_prompt)
 
 # При ошибке SSL: CERTIFICATE_VERIFY_FAILED certificate verify failed: unable to get local issuer certificate (_ssl.c:1129)')
 # pip install pip-system-certs
@@ -226,8 +226,8 @@ async def main():
             context = load_context(chat_id)
             logger.info(f"Загружен контекст: {context[:100]}...")
             if not context:
-                context = config["system_prompt"]
-                logger.info("Используется системный промпт как контекст")
+                context = f"{SYSTEM_PROMPT_START}{config['system_prompt']}{SYSTEM_PROMPT_END}"
+                logger.info("Используется системный промпт как контекст с разделителями")
 
             # Получаем среднее время генерации
             avg_time, count = get_avg_response_time(chat_id)
@@ -281,8 +281,8 @@ async def main():
 
             context = load_context(chat_id)
             if not context:
-                context = config["system_prompt"]
-                logger.info("Используется системный промпт как контекст")
+                context = f"{SYSTEM_PROMPT_START}{config['system_prompt']}{SYSTEM_PROMPT_END}"
+                logger.info("Используется системный промпт как контекст с разделителями")
             else:
                 logger.info(f"Загружен контекст: {context[:100]}...")
 

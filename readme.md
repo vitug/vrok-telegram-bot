@@ -24,14 +24,48 @@ Python 3.8+
 
 Kobold API server running locally or remotely.
 
+### 4. Usage
+In Russian:
+```plaintext
+Вот список доступных команд:
+/start — Запустить бота и получить приветствие.
+/help — Показать это сообщение со списком команд.
+/clear — Очистить контекст разговора.
+/continue — Продолжить текущую историю без нового ввода.
+/usertranslate — Включить/выключить перевод ваших сообщений на английский перед отправкой ИИ.
+/aitranslate — Включить/выключить перевод ответов ИИ на русский.
+/memory [текст] — Задать или посмотреть memory для ИИ (инструкцию о его поведении).
+/character [имя] — Задать или посмотреть имя персонажа (по умолчанию 'Person').
+/usercharacter [имя] — Задать или посмотреть имя пользователя (по умолчанию 'User'). Пробел и двоеточие добавляются автоматически.
+/getcontext — Получить текущий контекст разговора в виде текстового файла.
+Просто текст — Отправить сообщение ИИ, он ответит с учётом текущих настроек.
+... — Продолжить историю без явного ввода.
+```
+In English:
+```plaintext
+Here is the list of available commands:
+/start — Start the bot and receive a greeting.
+/help — Show this message with the list of commands.
+/clear — Clear the conversation context.
+/continue — Continue the current story without new input.
+/usertranslate — Enable/disable translation of your messages to English before sending to the AI.
+/aitranslate — Enable/disable translation of AI responses to Russian.
+/memory [text] — Set or view the AI's memory (instructions for its behavior).
+/character [name] — Set or view the character's name (default is 'Person').
+/usercharacter [name] — Set or view the user's name (default is 'User'). A space and colon are added automatically.
+/getcontext — Get the current conversation context as a text file.
+Plain text — Send a message to the AI, and it will respond based on the current settings.
+... — Continue the story without explicit input.
+```
+
+### 5. `LICENSE`
+
 License
 This project is licensed under the Creative Commons Attribution-NonCommercial 4.0 International License (CC BY-NC 4.0). See the LICENSE file for details.
 Contributing
 Feel free to fork this repository and submit pull requests. For major changes, please open an issue first.
 Author
 Vitug (replace with your GitHub username or contact info)
-
-### 4. `LICENSE`
 
 ```plaintext
 Creative Commons Attribution-NonCommercial 4.0 International License
