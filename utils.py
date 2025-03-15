@@ -19,6 +19,14 @@ import os
 SYSTEM_PROMPT_START = "###SYSTEM_PROMPT_START###"
 SYSTEM_PROMPT_END = "###SYSTEM_PROMPT_END###"
 
+def clean_system_prompt_markers(text):
+    """Удаляет маркеры системного промпта из текста."""
+    original_text = text
+    cleaned_text = text.replace(SYSTEM_PROMPT_START, "").replace(SYSTEM_PROMPT_END, "")
+    if original_text != cleaned_text:
+        logger.info(f"Удалены маркеры системного промпта: {original_text[:50]}... -> {cleaned_text[:50]}...")
+    return cleaned_text
+
 def add_system_prompt(prompt):
     """Добавляет системный промпт, окружённый разделителями."""
     return f"{SYSTEM_PROMPT_START}{prompt}{SYSTEM_PROMPT_END}"
@@ -36,7 +44,7 @@ def remove_system_prompt(context):
             return cleaned_context.strip()
     return context.strip()
 
-# Основной логгер (уже есть в коде)
+# Основной логгер
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
@@ -55,7 +63,7 @@ ai_detail_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - 
 ai_detail_logger.addHandler(ai_detail_handler)
 ai_detail_logger.propagate = False
 
-# Настройка SOCKS5-прокси (без изменений)
+# Настройка SOCKS5-прокси
 PROXY = "socks5://localhost:3128"
 apihelper.proxy = {'https': PROXY}
 
@@ -68,15 +76,18 @@ translator = GoogleTranslator(source='ru', target='en', session=translation_sess
 translator_reverse = GoogleTranslator(source='en', target='ru', session=translation_session)
 
 def temp_message_livetime(config=None):
+    """Возвращает время жизни временных сообщений из конфига или значение по умолчанию."""
     if config and "temp_message_lifetime" in config:
         return config["temp_message_lifetime"]
     return 30
 
 def is_english(text):
+    """Проверяет, состоит ли текст только из английских символов."""
     logger.info(f"Проверка текста на английский: {text[:50]}...")
     return all(ord(char) < 128 for char in text)
 
 def clean_text(text):
+    """Очищает текст от лишних повторений и нежелательных суффиксов."""
     logger.info(f"Очистка текста: {text[:50]}...")
     text = re.sub(r'(.)\1{3,}', r'\1\1', text)
     text = re.sub(r'(\w+)(un|yu|anon)\b', r'\1', text)
@@ -85,6 +96,7 @@ def clean_text(text):
     return cleaned
 
 def split_message(text, max_length=4096):
+    """Разбивает длинный текст на части для отправки в Telegram."""
     logger.info(f"Разбиение текста, длина: {len(text)}")
     if len(text) <= max_length:
         logger.info("Текст короче лимита, возвращаем как есть")
@@ -107,13 +119,16 @@ def get_default_character_name():
     return "Vrok"
 
 def init_db(db_file="context.db"):
+    """Инициализирует базу данных, проверяя структуру таблиц. Завершает выполнение при несоответствии."""
     logger.info(f"Инициализация базы данных: {db_file}")
-    conn = sqlite3.connect(db_file)
-    cursor = conn.cursor()
+    
+    # Проверяем, существует ли файл базы данных
+    if not os.path.exists(db_file):
+        logger.info("База данных не существует, создаём таблицы")
+        conn = sqlite3.connect(db_file)
+        cursor = conn.cursor()
 
-    # Проверка и создание таблицы user_context
-    cursor.execute("PRAGMA table_info(user_context)")
-    if not cursor.fetchall():
+        # Создаём таблицу user_context
         cursor.execute('''
             CREATE TABLE user_context (
                 chat_id INTEGER PRIMARY KEY,
@@ -122,10 +137,7 @@ def init_db(db_file="context.db"):
         ''')
         logger.info("Создана таблица user_context")
 
-    # Проверка и создание таблицы chat_settings
-    cursor.execute("PRAGMA table_info(chat_settings)")
-    columns = [col[1] for col in cursor.fetchall()]
-    if not columns:
+        # Создаём таблицу chat_settings
         cursor.execute(f'''
             CREATE TABLE chat_settings (
                 chat_id INTEGER PRIMARY KEY,
@@ -137,17 +149,8 @@ def init_db(db_file="context.db"):
             )
         ''')
         logger.info("Создана таблица chat_settings")
-    else:
-        if "character_name" not in columns:
-            cursor.execute(f"ALTER TABLE chat_settings ADD COLUMN character_name TEXT DEFAULT '{get_default_character_name()}'")
-            logger.info("Добавлен столбец character_name")
-        if "user_character_name" not in columns:
-            cursor.execute("ALTER TABLE chat_settings ADD COLUMN user_character_name TEXT DEFAULT 'User'")
-            logger.info("Добавлен столбец user_character_name")
 
-    # Проверка и создание таблицы response_times (перемещено до conn.close())
-    cursor.execute("PRAGMA table_info(response_times)")
-    if not cursor.fetchall():
+        # Создаём таблицу response_times
         cursor.execute('''
             CREATE TABLE response_times (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -158,12 +161,71 @@ def init_db(db_file="context.db"):
         ''')
         logger.info("Создана таблица response_times для статистики времени генерации")
 
+        conn.commit()
+        conn.close()
+        logger.info(f"База данных создана и готова: {db_file}")
+        return
+
+    # Если база существует, проверяем структуру
+    conn = sqlite3.connect(db_file)
+    cursor = conn.cursor()
+
+    # Ожидаемая структура таблиц
+    expected_tables = {
+        "user_context": [
+            ("chat_id", "INTEGER", 1),  # имя, тип, primary key
+            ("context", "TEXT", 0)
+        ],
+        "chat_settings": [
+            ("chat_id", "INTEGER", 1),
+            ("user_translate_enabled", "INTEGER", 0),
+            ("ai_translate_enabled", "INTEGER", 0),
+            ("memory", "TEXT", 0),
+            ("character_name", "TEXT", 0),
+            ("user_character_name", "TEXT", 0)
+        ],
+        "response_times": [
+            ("id", "INTEGER", 1),
+            ("chat_id", "INTEGER", 0),
+            ("response_time", "REAL", 0),
+            ("timestamp", "INTEGER", 0)
+        ]
+    }
+
+    # Проверяем наличие и структуру каждой таблицы
+    for table_name, expected_columns in expected_tables.items():
+        cursor.execute(f"PRAGMA table_info({table_name})")
+        columns = cursor.fetchall()
+        
+        if not columns:
+            logger.error(f"Таблица {table_name} отсутствует в базе данных!")
+            conn.close()
+            raise SystemExit(f"Ошибка: таблица {table_name} отсутствует в базе данных. Проверьте структуру базы.")
+
+        # Проверяем количество и имена столбцов
+        actual_columns = [(col[1], col[2], 1 if col[5] else 0) for col in columns]  # имя, тип, primary key
+        if len(actual_columns) != len(expected_columns):
+            logger.error(f"Несоответствие структуры таблицы {table_name}: ожидалось {len(expected_columns)} столбцов, найдено {len(actual_columns)}")
+            conn.close()
+            raise SystemExit(f"Ошибка: несоответствие структуры таблицы {table_name}. Проверьте базу данных.")
+
+        # Проверяем каждый столбец
+        for expected, actual in zip(expected_columns, actual_columns):
+            exp_name, exp_type, exp_pk = expected
+            act_name, act_type, act_pk = actual
+            if exp_name != act_name or exp_type != act_type or exp_pk != act_pk:
+                logger.error(f"Несоответствие в таблице {table_name}: ожидался столбец {exp_name} ({exp_type}, PK={exp_pk}), найден {act_name} ({act_type}, PK={act_pk})")
+                conn.close()
+                raise SystemExit(f"Ошибка: неверная структура таблицы {table_name}. Проверьте базу данных.")
+
+        logger.info(f"Структура таблицы {table_name} соответствует ожидаемой")
+
     # Завершение работы с базой данных
-    conn.commit()
     conn.close()
     logger.info(f"База данных готова: {db_file}")
 
 def save_context(chat_id, context, db_file="context.db"):
+    """Сохраняет контекст разговора для указанного chat_id."""
     logger.info(f"Сохранение контекста для chat_id: {chat_id}")
     conn = sqlite3.connect(db_file)
     cursor = conn.cursor()
@@ -173,6 +235,7 @@ def save_context(chat_id, context, db_file="context.db"):
     logger.info(f"Контекст сохранён: {context[:50]}...")
 
 def load_context(chat_id, db_file="context.db"):
+    """Загружает контекст разговора для указанного chat_id."""
     logger.info(f"Загрузка контекста для chat_id: {chat_id}")
     conn = sqlite3.connect(db_file)
     cursor = conn.cursor()
@@ -184,6 +247,7 @@ def load_context(chat_id, db_file="context.db"):
     return context
 
 def clear_context(chat_id, db_file="context.db"):
+    """Очищает контекст разговора для указанного chat_id."""
     logger.info(f"Очистка контекста для chat_id: {chat_id}")
     conn = sqlite3.connect(db_file)
     cursor = conn.cursor()
@@ -194,6 +258,7 @@ def clear_context(chat_id, db_file="context.db"):
 
 # Функции для работы с настройками (без изменений)
 def set_user_translate_enabled(chat_id, enabled, db_file="context.db"):
+    """Устанавливает настройку перевода сообщений пользователя."""
     logger.info(f"Установка user_translate_enabled для chat_id: {chat_id} на {enabled}")
     conn = sqlite3.connect(db_file)
     cursor = conn.cursor()
@@ -203,6 +268,7 @@ def set_user_translate_enabled(chat_id, enabled, db_file="context.db"):
     logger.info("Настройка сохранена")
 
 def set_ai_translate_enabled(chat_id, enabled, db_file="context.db"):
+    """Устанавливает настройку перевода ответов ИИ."""
     logger.info(f"Установка ai_translate_enabled для chat_id: {chat_id} на {enabled}")
     conn = sqlite3.connect(db_file)
     cursor = conn.cursor()
@@ -212,6 +278,7 @@ def set_ai_translate_enabled(chat_id, enabled, db_file="context.db"):
     logger.info("Настройка сохранена")
 
 def set_memory(chat_id, memory, db_file="context.db"):
+    """Устанавливает memory для ИИ."""
     logger.info(f"Установка memory для chat_id: {chat_id}: {memory[:50]}...")
     conn = sqlite3.connect(db_file)
     cursor = conn.cursor()
@@ -221,6 +288,7 @@ def set_memory(chat_id, memory, db_file="context.db"):
     logger.info("Memory установлено")
 
 def set_character_name(chat_id, character_name, db_file="context.db"):
+    """Устанавливает имя персонажа."""
     logger.info(f"Установка character_name для chat_id: {chat_id}: {character_name}")
     conn = sqlite3.connect(db_file)
     cursor = conn.cursor()
@@ -230,6 +298,7 @@ def set_character_name(chat_id, character_name, db_file="context.db"):
     logger.info("Имя персонажа установлено")
 
 def set_user_character_name(chat_id, user_character_name, db_file="context.db"):
+    """Устанавливает имя пользователя."""
     logger.info(f"Установка user_character_name для chat_id: {chat_id}: {user_character_name}")
     conn = sqlite3.connect(db_file)
     cursor = conn.cursor()
@@ -239,6 +308,7 @@ def set_user_character_name(chat_id, user_character_name, db_file="context.db"):
     logger.info("Имя пользователя установлено")
 
 def get_memory(chat_id, db_file="context.db"):
+    """Получает memory для ИИ."""
     logger.info(f"Получение memory для chat_id: {chat_id}")
     conn = sqlite3.connect(db_file)
     cursor = conn.cursor()
@@ -250,6 +320,7 @@ def get_memory(chat_id, db_file="context.db"):
     return memory
 
 def get_user_translate_enabled(chat_id, db_file="context.db"):
+    """Получает настройку перевода сообщений пользователя."""
     logger.info(f"Получение user_translate_enabled для chat_id: {chat_id}")
     conn = sqlite3.connect(db_file)
     cursor = conn.cursor()
@@ -261,6 +332,7 @@ def get_user_translate_enabled(chat_id, db_file="context.db"):
     return enabled
 
 def get_ai_translate_enabled(chat_id, db_file="context.db"):
+    """Получает настройку перевода ответов ИИ."""
     logger.info(f"Получение ai_translate_enabled для chat_id: {chat_id}")
     conn = sqlite3.connect(db_file)
     cursor = conn.cursor()
@@ -272,6 +344,7 @@ def get_ai_translate_enabled(chat_id, db_file="context.db"):
     return enabled
 
 def get_character_name(chat_id, db_file="context.db"):
+    """Получает имя персонажа."""
     logger.info(f"Получение character_name для chat_id: {chat_id}")
     conn = sqlite3.connect(db_file)
     cursor = conn.cursor()
@@ -283,6 +356,7 @@ def get_character_name(chat_id, db_file="context.db"):
     return name
 
 def get_user_character_name(chat_id, db_file="context.db"):
+    """Получает имя пользователя."""
     logger.info(f"Получение user_character_name для chat_id: {chat_id}")
     conn = sqlite3.connect(db_file)
     cursor = conn.cursor()
@@ -328,9 +402,11 @@ def get_avg_response_time(chat_id, db_file="context.db"):
     return None, len(times)
 
 def manage_config(config_file="config.json"):
+    """Управляет конфигурацией бота, загружает или создаёт файл config.json."""
     logger.info(f"Управление конфигурацией: {config_file}")
 
 def manage_config(config_file="config.json"):
+    """Управляет конфигурацией бота, загружает или создаёт файл config.json."""
     default_config = {
         "telegram_token": "YOUR_TELEGRAM_BOT_TOKEN",
         "kobold_api_url": "http://127.0.0.1:5001/api/v1/generate",
@@ -387,6 +463,7 @@ def manage_config(config_file="config.json"):
     return config
 
 def translate_text(text, to_english=True):
+    """Переводит текст на английский или русский в зависимости от параметра."""
     logger.info(f"Перевод текста: {text[:50]}..., на английский: {to_english}")
     try:
         if to_english:
@@ -402,6 +479,7 @@ def translate_text(text, to_english=True):
         return text
 
 async def check_kobold_api(url):
+    """Проверяет доступность Kobold API."""
     logger.info(f"Проверка Kobold API: {url}")
     async with aiohttp.ClientSession() as session:
         try:
@@ -450,6 +528,7 @@ def remove_last_word(text):
     return text
 
 async def generate_response_async(text, config, chat_id, context="", user_translate_enabled=True, ai_translate_enabled=True, continue_only=False):
+    """Генерирует ответ от Kobold API асинхронно."""
     logger.info(f"Генерация ответа для chat_id: {chat_id}, текст: {text[:50]}..., continue_only: {continue_only}")
     start_time = time.time()  # Запускаем замер времени выполнения
 
@@ -609,6 +688,9 @@ async def generate_response_async(text, config, chat_id, context="", user_transl
                 response_en = result["results"][0]["text"]
                 if not response_en:
                     raise ValueError("Пустой текст в ответе")
+
+                # Очищаем ответ от маркеров системного промпта
+                response_en = clean_system_prompt_markers(response_en)
 
                 # Удаляем последнее слово из ответа для плавного продолжения
                 response_en_cleaned = remove_last_word(response_en)

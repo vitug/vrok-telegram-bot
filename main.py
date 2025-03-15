@@ -29,7 +29,11 @@ async def main():
     try:
         logger.info("Запуск инициализации бота")
         config = manage_config()
-        init_db()
+        try:
+            init_db()  # Проверяет структуру или создаёт базу
+        except SystemExit as e:
+            logger.error(f"Программа завершена из-за ошибки в базе данных: {e}")
+            return  # Завершает main(), бот не запускается
         bot = AsyncTeleBot(config["telegram_token"])
         logger.info("Бот инициализирован с токеном")
 
@@ -52,6 +56,10 @@ async def main():
             chat_id = message.chat.id
             username = message.from_user.username or "Unknown"
             logger.info(f"Получена команда /start от chat_id: {chat_id}, username: {username}")
+            context = load_context(chat_id)
+            if not context:
+                context = add_system_prompt(config["system_prompt"])
+                save_context(chat_id, context)
             await bot.reply_to(message, "Привет! Я Врок, весёлый ИИ. Напиши что-нибудь, и я отвечу с юмором!\n"
                                        "Для списка команд используй /help.")
             logger.info(f"Отправлено приветственное сообщение в chat_id: {chat_id}")
@@ -226,7 +234,7 @@ async def main():
             context = load_context(chat_id)
             logger.info(f"Загружен контекст: {context[:100]}...")
             if not context:
-                context = f"{SYSTEM_PROMPT_START}{config['system_prompt']}{SYSTEM_PROMPT_END}"
+                context = add_system_prompt(config["system_prompt"])
                 logger.info("Используется системный промпт как контекст с разделителями")
 
             # Получаем среднее время генерации
@@ -281,7 +289,7 @@ async def main():
 
             context = load_context(chat_id)
             if not context:
-                context = f"{SYSTEM_PROMPT_START}{config['system_prompt']}{SYSTEM_PROMPT_END}"
+                context = add_system_prompt(config["system_prompt"])
                 logger.info("Используется системный промпт как контекст с разделителями")
             else:
                 logger.info(f"Загружен контекст: {context[:100]}...")
