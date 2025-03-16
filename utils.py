@@ -40,7 +40,7 @@ def remove_system_prompt(context):
         end_idx = context.find(end_marker, start_idx + len(start_marker))
         if end_idx != -1:
             cleaned_context = context[:start_idx] + context[end_idx + len(end_marker):]
-            logger.info(f"Удалён системный промпт из контекста: {context[start_idx:end_idx + len(end_marker)]}")
+            logger.info(f"Удалён системный промпт из контекста: {context[start_idx:end_idx + len(end_marker)][:50]}...")
             return cleaned_context.strip()
     return context.strip()
 
@@ -494,9 +494,21 @@ async def check_kobold_api(url):
             logger.error(f"Ошибка подключения к Kobold API: {e}")
             return False
 
+def get_default_memory():
+    """Возвращает значение memory по умолчанию."""
+    return "You are a cheerful AI, always responding with a bit of humor."
+
 def save_context_to_file(chat_id, config, db_file="context.db"):
-    """Сохраняет текущий контекст в временный текстовый файл, исключая системный промпт, и возвращает путь к файлу."""
+    """Сохраняет текущий контекст и memory в временный текстовый файл, исключая системный промпт, и возвращает путь к файлу."""
     logger.info(f"Сохранение контекста в файл для chat_id: {chat_id}")
+    
+    # Загружаем memory для данного chat_id
+    memory = get_memory(chat_id, db_file)
+    if not memory:
+        memory = get_default_memory() # Используем значение по умолчанию
+        logger.info(f"Memory не задано, используется значение по умолчанию: {memory[:50]}...")
+    
+    # Загружаем контекст
     context = load_context(chat_id, db_file)
     if not context:
         logger.info("Контекст пуст, возвращаем None")
@@ -510,9 +522,13 @@ def save_context_to_file(chat_id, config, db_file="context.db"):
     
     # Создаём временный файл
     with tempfile.NamedTemporaryFile(delete=False, suffix=".txt", mode="w", encoding="utf-8") as temp_file:
-        temp_file.write(cleaned_context)
+        # Записываем memory в начало файла
+        temp_file.write(f"Memory:\n{memory}\n\n")
+        # Записываем очищенный контекст после memory
+        temp_file.write(f"Context:\n{cleaned_context}")
         file_path = temp_file.name
-    logger.info(f"Контекст сохранён в файл: {file_path}")
+    
+    logger.info(f"Контекст и memory сохранены в файл: {file_path}")
     return file_path
 
 def remove_last_word(text):
@@ -576,11 +592,13 @@ async def generate_response_async(text, config, chat_id, context="", user_transl
 
     memory = get_memory(chat_id)
     if not memory:
-        memory = "You are a cheerful AI, always responding with a bit of humor."
+        memory = get_default_memory()
         logger.info(f"Memory по умолчанию: {memory[:50]}...")
     else:
         logger.info(f"Пользовательский memory: {memory[:50]}...")
-
+    
+	# Очищаем ответ от маркеров системного промпта
+    prompt = clean_system_prompt_markers(prompt)
     # Формируем payload с динамическим max_length
     payload = {
         "prompt": prompt,
@@ -688,9 +706,6 @@ async def generate_response_async(text, config, chat_id, context="", user_transl
                 response_en = result["results"][0]["text"]
                 if not response_en:
                     raise ValueError("Пустой текст в ответе")
-
-                # Очищаем ответ от маркеров системного промпта
-                response_en = clean_system_prompt_markers(response_en)
 
                 # Удаляем последнее слово из ответа для плавного продолжения
                 response_en_cleaned = remove_last_word(response_en)

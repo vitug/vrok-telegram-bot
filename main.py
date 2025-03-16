@@ -25,7 +25,24 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Создаём словарь для хранения блокировок по chat_id
+generation_locks = {}
+
+async def check_and_lock_generation(chat_id, message):
+    """Проверяет, идёт ли генерация для chat_id, и устанавливает блокировку. Возвращает True, если можно продолжать."""
+    if chat_id not in generation_locks:
+        generation_locks[chat_id] = asyncio.Lock()
+    
+    if generation_locks[chat_id].locked():
+        await bot.reply_to(message, "Генерация ответа уже идёт, подождите немного!")
+        logger.info(f"Генерация для chat_id: {chat_id} заблокирована, уже выполняется")
+        return False
+    
+    # Если генерация не идёт, возвращаем True и оставляем блокировку для использования в вызывающем коде
+    return True
+
 async def main():
+    global bot, config  # Делаем bot и config глобальными для использования в check_and_lock_generation
     try:
         logger.info("Запуск инициализации бота")
         config = manage_config()
@@ -237,46 +254,51 @@ async def main():
                 context = add_system_prompt(config["system_prompt"])
                 logger.info("Используется системный промпт как контекст с разделителями")
 
-            # Получаем среднее время генерации
-            avg_time, count = get_avg_response_time(chat_id)
-            status_text = "Продолжаю историю, пожалуйста, подождите..."
-            if avg_time:
-                status_text += f"\nСреднее время ответа: {avg_time:.2f} сек (на основе {count} предыдущих ответов)"
+            # Проверяем блокировку
+            if not await check_and_lock_generation(chat_id, message):
+                return
 
-            status_message = await bot.reply_to(message, status_text)
-            logger.info(f"Отправлено сообщение о статусе в chat_id: {chat_id}, message_id: {status_message.message_id}")
-            ai_response, text_en, response_en, character_name, character_prompt, response_time = await generate_response_async(
-                "", config, chat_id, context, get_user_translate_enabled(chat_id), get_ai_translate_enabled(chat_id), continue_only=True
-            )
-            logger.info(f"Сгенерирован ответ: {ai_response[:100]}...")
+            async with generation_locks[chat_id]:
+                # Получаем среднее время генерации
+                avg_time, count = get_avg_response_time(chat_id)
+                status_text = "Продолжаю историю, пожалуйста, подождите..."
+                if avg_time:
+                    status_text += f"\nСреднее время ответа: {avg_time:.2f} сек (на основе {count} предыдущих ответов)"
 
-            # Контекст обновляется в generate_response_async, здесь только отправляем ответ
-            message_parts = split_message(ai_response)
-            logger.info(f"Сообщение разбито на {len(message_parts)} частей: {message_parts[0][:50]}...")
-            await bot.edit_message_text(
-                text=message_parts[0],
-                chat_id=message.chat.id,
-                message_id=status_message.message_id
-            )
-            logger.info(f"Сообщение статуса отредактировано для chat_id: {chat_id}")
-            for part in message_parts[1:]:
-                await bot.send_message(chat_id=message.chat.id, text=part)
-                logger.info(f"Отправлена дополнительная часть в chat_id: {chat_id}")
+                status_message = await bot.reply_to(message, status_text)
+                logger.info(f"Отправлено сообщение о статусе в chat_id: {chat_id}, message_id: {status_message.message_id}")
+                ai_response, text_en, response_en, character_name, character_prompt, response_time = await generate_response_async(
+                    "", config, chat_id, context, get_user_translate_enabled(chat_id), get_ai_translate_enabled(chat_id), continue_only=True
+                )
+                logger.info(f"Сгенерирован ответ: {ai_response[:100]}...")
 
-            # Отправляем временное сообщение о завершении генерации
-            temp_message = await bot.send_message(
-                chat_id=message.chat.id,
-                text=f"Генерация завершена за {response_time:.2f} сек"
-            )
-            logger.info(f"Отправлено временное сообщение о завершении в chat_id: {chat_id}, message_id: {temp_message.message_id}")
-            
-            # Удаляем сообщение через temp_message_livetime секунд
-            await asyncio.sleep(temp_message_livetime(config))
-            try:
-                await bot.delete_message(chat_id=message.chat.id, message_id=temp_message.message_id)
-                logger.info(f"Временное сообщение удалено в chat_id: {chat_id}, message_id: {temp_message.message_id}")
-            except Exception as e:
-                logger.warning(f"Не удалось удалить временное сообщение: {e}")
+                # Контекст обновляется в generate_response_async, здесь только отправляем ответ
+                message_parts = split_message(ai_response)
+                logger.info(f"Сообщение разбито на {len(message_parts)} частей: {message_parts[0][:50]}...")
+                await bot.edit_message_text(
+                    text=message_parts[0],
+                    chat_id=message.chat.id,
+                    message_id=status_message.message_id
+                )
+                logger.info(f"Сообщение статуса отредактировано для chat_id: {chat_id}")
+                for part in message_parts[1:]:
+                    await bot.send_message(chat_id=message.chat.id, text=part)
+                    logger.info(f"Отправлена дополнительная часть в chat_id: {chat_id}")
+
+                # Отправляем временное сообщение о завершении генерации
+                temp_message = await bot.send_message(
+                    chat_id=message.chat.id,
+                    text=f"Генерация завершена за {response_time:.2f} сек"
+                )
+                logger.info(f"Отправлено временное сообщение о завершении в chat_id: {chat_id}, message_id: {temp_message.message_id}")
+                
+                # Удаляем сообщение через temp_message_livetime секунд
+                await asyncio.sleep(temp_message_livetime(config))
+                try:
+                    await bot.delete_message(chat_id=message.chat.id, message_id=temp_message.message_id)
+                    logger.info(f"Временное сообщение удалено в chat_id: {chat_id}, message_id: {temp_message.message_id}")
+                except Exception as e:
+                    logger.warning(f"Не удалось удалить временное сообщение: {e}")
 
         @bot.message_handler(content_types=['text'])
         async def handle_message(message):
@@ -294,49 +316,52 @@ async def main():
             else:
                 logger.info(f"Загружен контекст: {context[:100]}...")
 
-            # Получаем среднее время генерации
-            avg_time, count = get_avg_response_time(chat_id)
-            status_text = "Генерирую ответ, пожалуйста, подождите..."
-            if avg_time:
-                status_text += f"\nСреднее время ответа: {avg_time:.2f} сек (на основе {count} предыдущих ответов)"
+            # Проверяем блокировку
+            if not await check_and_lock_generation(chat_id, message):
+                return
 
-            status_message = await bot.reply_to(message, status_text)
-            logger.info(f"Отправлено сообщение о статусе в chat_id: {chat_id}, message_id: {status_message.message_id}")
-            
-            ai_response, text_en, response_en, character_name, character_prompt, response_time = await generate_response_async(
-                user_message, config, chat_id, context, get_user_translate_enabled(chat_id), get_ai_translate_enabled(chat_id)
-            )
-            logger.info(f"Сгенерирован ответ: {ai_response[:100]}...")
+            async with generation_locks[chat_id]:
+                # Получаем среднее время генерации
+                avg_time, count = get_avg_response_time(chat_id)
+                status_text = "Генерирую ответ, пожалуйста, подождите..."
+                if avg_time:
+                    status_text += f"\nСреднее время ответа: {avg_time:.2f} сек (на основе {count} предыдущих ответов)"
 
-            # Отправляем основной ответ
-            message_parts = split_message(ai_response)
-            logger.info(f"Сообщение разбито на {len(message_parts)} частей: {message_parts[0][:50]}...")
-            await bot.edit_message_text(
-                text=message_parts[0],
-                chat_id=message.chat.id,
-                message_id=status_message.message_id
-            )
-            logger.info(f"Сообщение статуса отредактировано для chat_id: {chat_id}")
-            for part in message_parts[1:]:
-                await bot.send_message(chat_id=message.chat.id, text=part)
-                logger.info(f"Отправлена дополнительная часть в chat_id: {chat_id}")
+                status_message = await bot.reply_to(message, status_text)
+                logger.info(f"Отправлено сообщение о статусе в chat_id: {chat_id}, message_id: {status_message.message_id}")
+                
+                ai_response, text_en, response_en, character_name, character_prompt, response_time = await generate_response_async(
+                    user_message, config, chat_id, context, get_user_translate_enabled(chat_id), get_ai_translate_enabled(chat_id)
+                )
+                logger.info(f"Сгенерирован ответ: {ai_response[:100]}...")
 
-            # Отправляем временное сообщение о завершении генерации
-            temp_message = await bot.send_message(
-                chat_id=message.chat.id,
-                text=f"Генерация завершена за {response_time:.2f} сек"
-            )
-            logger.info(f"Отправлено временное сообщение о завершении в chat_id: {chat_id}, message_id: {temp_message.message_id}")
-            
-            # Удаляем сообщение через temp_message_livetime секунд
-            await asyncio.sleep(temp_message_livetime(config))
-            try:
-                await bot.delete_message(chat_id=message.chat.id, message_id=temp_message.message_id)
-                logger.info(f"Временное сообщение удалено в chat_id: {chat_id}, message_id: {temp_message.message_id}")
-            except Exception as e:
-                logger.warning(f"Не удалось удалить временное сообщение: {e}")
+                # Отправляем основной ответ
+                message_parts = split_message(ai_response)
+                logger.info(f"Сообщение разбито на {len(message_parts)} частей: {message_parts[0][:50]}...")
+                await bot.edit_message_text(
+                    text=message_parts[0],
+                    chat_id=message.chat.id,
+                    message_id=status_message.message_id
+                )
+                logger.info(f"Сообщение статуса отредактировано для chat_id: {chat_id}")
+                for part in message_parts[1:]:
+                    await bot.send_message(chat_id=message.chat.id, text=part)
+                    logger.info(f"Отправлена дополнительная часть в chat_id: {chat_id}")
 
-        # (Остальной код остаётся без изменений)
+                # Отправляем временное сообщение о завершении генерации
+                temp_message = await bot.send_message(
+                    chat_id=message.chat.id,
+                    text=f"Генерация завершена за {response_time:.2f} сек"
+                )
+                logger.info(f"Отправлено временное сообщение о завершении в chat_id: {chat_id}, message_id: {temp_message.message_id}")
+                
+                # Удаляем сообщение через temp_message_livetime секунд
+                await asyncio.sleep(temp_message_livetime(config))
+                try:
+                    await bot.delete_message(chat_id=message.chat.id, message_id=temp_message.message_id)
+                    logger.info(f"Временное сообщение удалено в chat_id: {chat_id}, message_id: {temp_message.message_id}")
+                except Exception as e:
+                    logger.warning(f"Не удалось удалить временное сообщение: {e}")
 
         logger.info("Запуск polling")
         await polling_with_logging()
