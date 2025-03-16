@@ -692,8 +692,24 @@ async def generate_response_async(text, config, chat_id, context="", user_transl
                     return "Ошибка: не удалось декодировать ответ от Kobold API", text, "", character_name, character_prompt, 0.0
 
                 logger.info(f"Ответ Kobold API: {response_text[:50]}...")
+
+                # Проверка, является ли ответ валидным JSON
+                if not response_text.strip().startswith('{'):
+                    logger.error(f"Получен невалидный JSON от Kobold API: {response_text[:100]}...")
+                    return (
+                        f"Ошибка: Kobold API вернул невалидный JSON: {response_text[:100]}...",
+                        text, "", character_name, character_prompt, 0.0
+                    )
+
                 # Парсим JSON-ответ
-                result = json.loads(response_text)
+                try:
+                    result = json.loads(response_text)
+                except json.JSONDecodeError as e:
+                    logger.error(f"Ошибка парсинга JSON от Kobold API: {str(e)}, текст ответа: {response_text[:100]}...")
+                    return (
+                        f"Ошибка: не удалось распарсить ответ от Kobold API ({str(e)})",
+                        text, "", character_name, character_prompt, 0.0
+                    )
 
                 # Логируем полный JSON-ответ в ai_details.log, если включено
                 if config.get("log_ai_details", False):
