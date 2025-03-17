@@ -285,20 +285,20 @@ async def main():
                     await bot.send_message(chat_id=message.chat.id, text=part)
                     logger.info(f"Отправлена дополнительная часть в chat_id: {chat_id}")
 
-                # Отправляем временное сообщение о завершении генерации
-                temp_message = await bot.send_message(
-                    chat_id=message.chat.id,
-                    text=f"Генерация завершена за {response_time:.2f} сек"
-                )
-                logger.info(f"Отправлено временное сообщение о завершении в chat_id: {chat_id}, message_id: {temp_message.message_id}")
-                
-                # Удаляем сообщение через temp_message_livetime секунд
-                await asyncio.sleep(temp_message_livetime(config))
-                try:
-                    await bot.delete_message(chat_id=message.chat.id, message_id=temp_message.message_id)
-                    logger.info(f"Временное сообщение удалено в chat_id: {chat_id}, message_id: {temp_message.message_id}")
-                except Exception as e:
-                    logger.warning(f"Не удалось удалить временное сообщение: {e}")
+            # Отправляем временное сообщение о завершении генерации
+            temp_message = await bot.send_message(
+                chat_id=message.chat.id,
+                text=f"Генерация завершена за {response_time:.2f} сек"
+            )
+            logger.info(f"Отправлено временное сообщение о завершении в chat_id: {chat_id}, message_id: {temp_message.message_id}")
+            
+            # Удаляем сообщение через temp_message_livetime секунд
+            await asyncio.sleep(temp_message_livetime(config))
+            try:
+                await bot.delete_message(chat_id=message.chat.id, message_id=temp_message.message_id)
+                logger.info(f"Временное сообщение удалено в chat_id: {chat_id}, message_id: {temp_message.message_id}")
+            except Exception as e:
+                logger.warning(f"Не удалось удалить временное сообщение: {e}")
 
         @bot.message_handler(content_types=['text'])
         async def handle_message(message):
@@ -348,20 +348,20 @@ async def main():
                     await bot.send_message(chat_id=message.chat.id, text=part)
                     logger.info(f"Отправлена дополнительная часть в chat_id: {chat_id}")
 
-                # Отправляем временное сообщение о завершении генерации
-                temp_message = await bot.send_message(
-                    chat_id=message.chat.id,
-                    text=f"Генерация завершена за {response_time:.2f} сек"
-                )
-                logger.info(f"Отправлено временное сообщение о завершении в chat_id: {chat_id}, message_id: {temp_message.message_id}")
-                
-                # Удаляем сообщение через temp_message_livetime секунд
-                await asyncio.sleep(temp_message_livetime(config))
-                try:
-                    await bot.delete_message(chat_id=message.chat.id, message_id=temp_message.message_id)
-                    logger.info(f"Временное сообщение удалено в chat_id: {chat_id}, message_id: {temp_message.message_id}")
-                except Exception as e:
-                    logger.warning(f"Не удалось удалить временное сообщение: {e}")
+            # Отправляем временное сообщение о завершении генерации
+            temp_message = await bot.send_message(
+                chat_id=message.chat.id,
+                text=f"Генерация завершена за {response_time:.2f} сек"
+            )
+            logger.info(f"Отправлено временное сообщение о завершении в chat_id: {chat_id}, message_id: {temp_message.message_id}")
+            
+            # Удаляем сообщение через temp_message_livetime секунд
+            await asyncio.sleep(temp_message_livetime(config))
+            try:
+                await bot.delete_message(chat_id=message.chat.id, message_id=temp_message.message_id)
+                logger.info(f"Временное сообщение удалено в chat_id: {chat_id}, message_id: {temp_message.message_id}")
+            except Exception as e:
+                logger.warning(f"Не удалось удалить временное сообщение: {e}")
 
         logger.info("Запуск polling")
         await polling_with_logging()
