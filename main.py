@@ -2,6 +2,9 @@
 import asyncio
 import logging
 import os
+import re
+import tempfile
+import locale
 from telebot.async_telebot import AsyncTeleBot
 from utils import (manage_config, init_db, load_context, save_context, clear_context,
                   get_user_translate_enabled, set_user_translate_enabled,
@@ -363,6 +366,159 @@ async def main():
             except Exception as e:
                 logger.warning(f"Не удалось удалить временное сообщение: {e}")
 
+        @bot.message_handler(content_types=['voice'])
+        async def handle_voice_message(message):
+            chat_id = message.chat.id
+            username = message.from_user.username or "Unknown"
+            logger.info(f"Получено аудио-сообщение от chat_id: {chat_id}, username: {username}")
+
+            # Проверяем блокировку
+            if not await check_and_lock_generation(chat_id, message):
+                return
+
+            async with generation_locks[chat_id]:
+                # Скачиваем аудио-файл
+                file_info = await bot.get_file(message.voice.file_id)
+                downloaded_file = await bot.download_file(file_info.file_path)
+
+                # Создаём временный файл для аудио
+                with tempfile.NamedTemporaryFile(delete=False, suffix=".ogg") as temp_audio:
+                    temp_audio.write(downloaded_file)
+                    audio_file_path = temp_audio.name
+                logger.info(f"Аудио сохранено во временный файл: {audio_file_path}")
+
+                # Создаём путь для текстового файла, убирая расширение .ogg
+                text_file_path = os.path.splitext(audio_file_path)[0] + ".txt"
+                logger.info(f"Ожидаемый путь к текстовому файлу: {text_file_path}")
+
+                # Логируем путь к утилите перед её вызовом
+                logger.info(f"Используется утилита преобразования аудио: {config['audio_to_text_tool']}")
+
+                # Отправляем временное сообщение о преобразовании речи в текст
+                transcribe_status = await bot.reply_to(message, "Преобразование речи в текст, подождите...")
+                logger.info(f"Отправлено временное сообщение о преобразовании в chat_id: {chat_id}, message_id: {transcribe_status.message_id}")
+
+                # Вызываем утилиту для преобразования аудио в текст
+                try:
+                    process = await asyncio.create_subprocess_exec(
+                        config["audio_to_text_tool"], audio_file_path,
+                        stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+                    )
+                    stdout, stderr = await process.communicate()
+
+                    # Логируем вывод утилиты
+                    try:
+                        stdout_str = stdout.decode('cp866').strip() if stdout else "нет вывода"
+                    except UnicodeDecodeError as e:
+                        stdout_str = f"ошибка декодирования: {str(e)}"
+                        logger.warning(f"Не удалось декодировать stdout утилиты {config['audio_to_text_tool']}: {stdout[:100]}...")
+                    try:
+                        stderr_str = stderr.decode('cp866').strip() if stderr else "нет ошибок"
+                    except UnicodeDecodeError as e:
+                        stderr_str = f"ошибка декодирования: {str(e)}"
+                        logger.warning(f"Не удалось декодировать stderr утилиты {config['audio_to_text_tool']}: {stderr[:100]}...")
+
+                    logger.info(f"Вывод утилиты (stdout): {stdout_str[:100]}...")
+                    logger.info(f"Ошибки утилиты (stderr): {stderr_str[:100]}...")
+                    logger.info(f"Код завершения утилиты: {process.returncode}")
+
+                    # Проверяем код завершения и наличие ошибок в stderr
+                    if process.returncode != 0 or (stderr and stderr_str != "нет ошибок"):
+                        logger.error(f"Утилита завершилась с проблемой (returncode={process.returncode}): {stderr_str[:100]}...")
+                        await bot.reply_to(message, "Ошибка: утилита преобразования аудио завершилась с ошибкой или не выполнила задачу.")
+                        return
+
+                    # Проверяем наличие выходного файла
+                    if not os.path.exists(text_file_path):
+                        logger.error(f"Утилита не создала выходной файл: {text_file_path}")
+                        await bot.reply_to(message, "Ошибка: утилита не создала текстовый файл с распознанным текстом.")
+                        return
+
+                    logger.info("Аудио успешно преобразовано в текст")
+
+                    # Читаем текст из выходного файла
+                    try:
+                        with open(text_file_path, 'r', encoding='utf-8') as text_file:
+                            raw_text = text_file.read()
+                        logger.info(f"Прочитан текст из файла: {raw_text[:50]}...")
+                        clean_text = re.sub(r'\[\d{2}:\d{2}\.\d{3} --> \d{2}:\d{2}\.\d{3}\]\s*', '', raw_text).strip()
+                        logger.info(f"Текст после очистки: {clean_text[:50]}...")
+                        
+                        # Удаляем временное сообщение о преобразовании
+                        try:
+                            await bot.delete_message(chat_id=message.chat.id, message_id=transcribe_status.message_id)
+                            logger.info(f"Удалено временное сообщение о преобразовании в chat_id: {chat_id}, message_id: {transcribe_status.message_id}")
+                        except Exception as e:
+                            logger.warning(f"Не удалось удалить временное сообщение о преобразовании: {e}")
+
+                        # Отправляем распознанный текст пользователю
+                        await bot.reply_to(message, f"Распознанный текст:\n{clean_text}")
+                    except FileNotFoundError:
+                        logger.error(f"Выходной файл {text_file_path} не найден")
+                        await bot.reply_to(message, "Ошибка: утилита не создала текстовый файл.")
+                        return
+                    except Exception as e:
+                        logger.error(f"Ошибка при чтении текстового файла: {str(e)}")
+                        await bot.reply_to(message, "Ошибка: не удалось прочитать текст из файла.")
+                        return
+
+                    # Загружаем контекст
+                    context = load_context(chat_id)
+                    if not context:
+                        context = add_system_prompt(config["system_prompt"])
+                        logger.info("Используется системный промпт как контекст с разделителями")
+
+                    # Получаем среднее время генерации
+                    avg_time, count = get_avg_response_time(chat_id)
+                    status_text = "Генерация ответа, подождите..."
+                    if avg_time:
+                        status_text += f"\nСреднее время ответа: {avg_time:.2f} сек (на основе {count} ответов)"
+
+                    status_message = await bot.reply_to(message, status_text)
+                    logger.info(f"Отправлено сообщение о статусе в chat_id: {chat_id}, message_id: {status_message.message_id}")
+
+                    # Генерируем ответ ИИ
+                    ai_response, text_en, response_en, character_name, character_prompt, response_time = await generate_response_async(
+                        clean_text, config, chat_id, context, get_user_translate_enabled(chat_id), get_ai_translate_enabled(chat_id)
+                    )
+                    logger.info(f"Сгенерирован ответ: {ai_response[:50]}...")
+
+                    # Отправляем ответ
+                    message_parts = split_message(ai_response)
+                    await bot.edit_message_text(
+                        text=message_parts[0],
+                        chat_id=message.chat.id,
+                        message_id=status_message.message_id
+                    )
+                    for part in message_parts[1:]:
+                        await bot.send_message(chat_id=message.chat.id, text=part)
+
+                    # Отправляем временное сообщение о завершении
+                    temp_message = await bot.send_message(
+                        chat_id=message.chat.id,
+                        text=f"Генерация завершена за {response_time:.2f} сек"
+                    )
+                    await asyncio.sleep(temp_message_livetime(config))
+                    try:
+                        await bot.delete_message(chat_id=message.chat.id, message_id=temp_message.message_id)
+                    except Exception as e:
+                        logger.warning(f"Не удалось удалить временное сообщение о завершении: {e}")
+
+                except Exception as e:
+                    logger.error(f"Ошибка при обработке аудио-сообщения: {str(e)}")
+                    await bot.reply_to(message, "Произошла ошибка при обработке аудио-сообщения.")
+                    return
+
+                finally:
+                    # Удаляем временные файлы
+                    try:
+                        os.remove(audio_file_path)
+                        if os.path.exists(text_file_path):
+                            os.remove(text_file_path)
+                        logger.info(f"Удалены временные файлы: {audio_file_path}, {text_file_path}")
+                    except Exception as e:
+                        logger.warning(f"Не удалось удалить временные файлы: {e}")
+                
         logger.info("Запуск polling")
         await polling_with_logging()
 
