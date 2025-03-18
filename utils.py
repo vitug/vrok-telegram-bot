@@ -828,6 +828,12 @@ async def generate_response_async(text, config, chat_id, context="", user_transl
                 "Ошибка: ответ от Kobold API был получен не полностью. "
                 "Попробуйте снова или обратитесь к администратору."
             ), text, "", character_name, character_prompt, 0.0
+        except (aiohttp.ClientConnectionError, ConnectionResetError, OSError) as e:
+            logger.error(f"Ошибка при запросе к Kobold API: {str(e)}")
+            return (
+                f"Ошибка: не удалось подключиться к Kobold API ({str(e)}). Попробуйте позже.",
+                text, "", character_name, character_prompt, 0.0
+            )
         except asyncio.TimeoutError:
             logger.error("Превышено время ожидания ответа от Kobold API")
             default_character_name = get_default_character_name()  # Используем функцию
