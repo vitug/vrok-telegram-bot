@@ -580,15 +580,30 @@ def save_context_to_file(chat_id, config, db_file="context.db"):
     return file_path
 
 def remove_last_word(text):
-    """Удаляет только последнее слово из текста, сохраняя знаки препинания и кавычки."""
-    # Учитываем текст в кавычках и знаки препинания в конце
+    """Удаляет последнее слово из текста, если предложение не заканчивается знаком препинания, сохраняя знаки препинания и кавычки."""
+    text = text.strip()  # Убираем лишние пробелы в начале и конце
+    if not text:  # Если текст пустой, возвращаем его как есть
+        return text
+    
+    # Определяем знаки препинания, которые считаем завершением предложения
+    punctuation_marks = ',.!?;:'
+    # Проверяем, заканчивается ли текст любым знаком препинания
+    if any(text.rstrip().endswith(mark) for mark in punctuation_marks):
+        logger.debug(f"Текст заканчивается знаком препинания: '{text}', последнее слово не удаляется")
+        return text
+    
+    # Учитываем текст в кавычках и знаки препинания в конце для незаконченных предложений
     pattern = r'(\s+)(\w+)(\W*)$'
     match = re.search(pattern, text)
     if match:
         # Группа 1: пробел перед последним словом
-        # Группа 2: последнее слово
+        # Группа 2: последнее слово (удаляется)
         # Группа 3: знаки препинания и кавычки после слова
-        return text[:match.start()] + match.group(1) + match.group(3)
+        result = text[:match.start()] + match.group(1) + match.group(3)
+        logger.debug(f"Удалено последнее слово из '{text}': '{result}'")
+        return result
+    
+    logger.debug(f"Не найдено последнее слово для удаления в '{text}'")
     return text
 
 async def generate_response_async(text, config, chat_id, context="", user_translate_enabled=True, ai_translate_enabled=True, continue_only=False):
