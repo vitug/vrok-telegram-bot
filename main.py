@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import asyncio
+import json
 import logging
 import os
 import re
@@ -44,11 +45,45 @@ async def check_and_lock_generation(chat_id, message):
     # Если генерация не идёт, возвращаем True и оставляем блокировку для использования в вызывающем коде
     return True
 
+async def monitor_config(config_path, interval=10):
+    """Периодически проверяет изменения в файле конфигурации и обновляет глобальный config."""
+    global config
+    last_mtime = os.path.getmtime(config_path)
+    logger.info(f"Запущено сканирование файла конфигурации: {config_path} с интервалом {interval} сек")
+
+    while True:
+        try:
+            current_mtime = os.path.getmtime(config_path)
+            if current_mtime != last_mtime:
+                logger.info(f"Обнаружено изменение файла конфигурации: {config_path}")
+                with open(config_path, 'r', encoding='utf-8') as f:
+                    new_config = json.load(f)
+                config.update(new_config)  # Обновляем существующий config
+                last_mtime = current_mtime
+                logger.info("Конфигурация успешно обновлена")
+            await asyncio.sleep(interval)
+        except FileNotFoundError:
+            logger.error(f"Файл конфигурации {config_path} не найден. Ожидание восстановления...")
+            await asyncio.sleep(interval)
+        except json.JSONDecodeError as e:
+            logger.error(f"Ошибка декодирования JSON в файле {config_path}: {str(e)}. Используется предыдущая конфигурация.")
+            await asyncio.sleep(interval)
+        except Exception as e:
+            logger.error(f"Ошибка при сканировании конфига: {str(e)}")
+            await asyncio.sleep(interval)
+            
 async def main():
     global bot, config  # Делаем bot и config глобальными для использования в check_and_lock_generation
+    config = {}
     try:
         logger.info("Запуск инициализации бота")
-        config = manage_config()
+        
+        # Путь к файлу конфигурации (предполагается, что это config.json)
+        config_path = "config.json"  # Убедитесь, что путь соответствует вашему файлу
+        config = manage_config(config_path)
+        # Запускаем задачу мониторинга конфига
+        asyncio.create_task(monitor_config(config_path, interval=10))
+        
         try:
             init_db()  # Проверяет структуру или создаёт базу
         except SystemExit as e:

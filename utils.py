@@ -403,10 +403,6 @@ def get_avg_response_time(chat_id, db_file="context.db"):
 
 def manage_config(config_file="config.json"):
     """Управляет конфигурацией бота, загружает или создаёт файл config.json."""
-    logger.info(f"Управление конфигурацией: {config_file}")
-
-def manage_config(config_file="config.json"):
-    """Управляет конфигурацией бота, загружает или создаёт файл config.json."""
     default_config = {
         "telegram_token": "YOUR_TELEGRAM_BOT_TOKEN",
         "kobold_api_url": "http://127.0.0.1:5001/api/v1/generate",
