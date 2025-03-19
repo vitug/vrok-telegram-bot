@@ -25,38 +25,39 @@ Python 3.8+
 Kobold API server running locally or remotely.
 
 ### 4. Usage
-In Russian:
+#### 4.1 In Russian:
 ```plaintext
-Вот список доступных команд:
-/start — Запустить бота и получить приветствие.
-/help — Показать это сообщение со списком команд.
-/clear — Очистить контекст разговора.
-/continue — Продолжить текущую историю без нового ввода.
-/usertranslate — Включить/выключить перевод ваших сообщений на английский перед отправкой ИИ.
-/aitranslate — Включить/выключить перевод ответов ИИ на русский.
-/memory [текст] — Задать или посмотреть memory для ИИ (инструкцию о его поведении).
-/character [имя] — Задать или посмотреть имя персонажа (по умолчанию 'Person').
-/usercharacter [имя] — Задать или посмотреть имя пользователя (по умолчанию 'User'). Пробел и двоеточие добавляются автоматически.
-/getcontext — Получить текущий контекст разговора в виде текстового файла.
-Просто текст — Отправить сообщение ИИ, он ответит с учётом текущих настроек.
-... — Продолжить историю без явного ввода.
+Список команд бота:
+- /start Запускает бота и отправляет приветственное сообщение. Инициализирует контекст разговора с системным промптом.
+- /help Показывает это сообщение со списком всех доступных команд.
+- /clear Очищает текущий контекст разговора, позволяя начать общение с чистого листа.
+- /continue Продолжает текущую историю без нового ввода, основываясь на сохранённом контексте.
+- /usertranslate Включает или выключает перевод ваших текстовых сообщений на английский перед отправкой ИИ. По умолчанию включён.
+- /aitranslate Включает или выключает перевод ответов ИИ на русский. По умолчанию включён.
+- /memory [текст] Задаёт или показывает инструкцию (memory) о поведении ИИ. Без аргумента выводит текущее значение. Пример: /memory You are a friendly assistant — задаёт новое поведение.
+- /character [имя] Задаёт или показывает имя персонажа ИИ (по умолчанию "Vrok"). Если перевод включён, имя переводится на английский. Пример: /character Alex — устанавливает имя "Alex".
+- /usercharacter [имя] Задаёт или показывает ваше имя в диалоге (по умолчанию "User"). Добавляет ": " автоматически. Если перевод включён, имя переводится на английский. Пример: /usercharacter Анна — устанавливает "Anna: ".
+- /getcontext Отправляет текущий контекст разговора и memory в виде текстового файла (без системного промпта).
+- /extension [имя] Выбирает дополнение персонажа, влияющее на стиль общения. Без аргумента показывает список доступных дополнений (например, Humor, Wisdom, Sarcasm) и текущее активное. Пример: /extension Humor — активирует режим с юмором и остроумием.
+- Голосовые сообщения Отправьте голосовое сообщение, и бот преобразует его в текст с помощью утилиты, покажет распознанный текст, а затем сгенерирует ответ ИИ с учётом текущего дополнения.
+- Текстовые сообщения Отправьте текст, и бот ответит с учётом контекста, настроек перевода и выбранного дополнения. Используйте "..." для продолжения без ввода.In English:
 ```
-In English:
+#### 4.2 In English:
 ```plaintext
-Here is the list of available commands:
-/start — Start the bot and receive a greeting.
-/help — Show this message with the list of commands.
-/clear — Clear the conversation context.
-/continue — Continue the current story without new input.
-/usertranslate — Enable/disable translation of your messages to English before sending to the AI.
-/aitranslate — Enable/disable translation of AI responses to Russian.
-/memory [text] — Set or view the AI's memory (instructions for its behavior).
-/character [name] — Set or view the character's name (default is 'Person').
-/usercharacter [name] — Set or view the user's name (default is 'User'). A space and colon are added automatically.
-/getcontext — Get the current conversation context as a text file.
-Plain text — Send a message to the AI, and it will respond based on the current settings.
-... — Continue the story without explicit input.
-```
+List of bot commands:
+- /start Starts the bot and sends a welcome message. Initializes the conversation context with a system prompt.
+- /help Shows this message with a list of all available commands.
+- /clear Clears the current conversation context, allowing you to start fresh.
+- /continue Continues the current story without new input, based on the saved context.
+- /usertranslate Enables or disables translation of your text messages to English before sending to the AI. Enabled by default.
+- /aitranslate Enables or disables translation of AI responses to Russian. Enabled by default.
+- /memory [text] Sets or shows the instruction (memory) for the AI's behavior. Without an argument, it displays the current value. Example: /memory You are a friendly assistant — sets new behavior.
+- /character [name] Sets or shows the AI character's name (default is "Vrok"). If translation is enabled, the name is translated to English. Example: /character Alex — sets the name "Alex".
+- /usercharacter [name] Sets or shows your name in the dialogue (default is "User"). Automatically adds ": ". If translation is enabled, the name is translated to English. Example: /usercharacter Anna — sets "Anna: ".
+- /getcontext Sends the current conversation context and memory as a text file (without the system prompt).
+- /extension [name] Selects a character extension that affects the communication style. Without an argument, it shows the list of available extensions (e.g., Humor, Wisdom, Sarcasm) and the current active one. Example: /extension Humor — activates a mode with humor and wit.
+- Voice messages Send a voice message, and the bot will convert it to text using a utility, display the recognized text, and then generate an AI response based on the current extension.
+- Text messages Send a text message, and the bot will respond based on the context, translation settings, and selected extension. Use "..." to continue without new input.```
 
 ### 5. `LICENSE`
 

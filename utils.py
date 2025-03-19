@@ -19,31 +19,6 @@ import os
 SYSTEM_PROMPT_START = "###SYSTEM_PROMPT_START###"
 SYSTEM_PROMPT_END = "###SYSTEM_PROMPT_END###"
 
-def clean_system_prompt_markers(text):
-    """Удаляет маркеры системного промпта из текста."""
-    original_text = text
-    cleaned_text = text.replace(SYSTEM_PROMPT_START, "").replace(SYSTEM_PROMPT_END, "")
-    if original_text != cleaned_text:
-        logger.info(f"Удалены маркеры системного промпта: {original_text[:50]}... -> {cleaned_text[:50]}...")
-    return cleaned_text
-
-def add_system_prompt(prompt):
-    """Добавляет системный промпт, окружённый разделителями."""
-    return f"{SYSTEM_PROMPT_START}{prompt}{SYSTEM_PROMPT_END}"
-
-def remove_system_prompt(context):
-    """Удаляет системный промпт, окружённый разделителями, из контекста."""
-    start_marker = SYSTEM_PROMPT_START
-    end_marker = SYSTEM_PROMPT_END
-    start_idx = context.find(start_marker)
-    if start_idx != -1:
-        end_idx = context.find(end_marker, start_idx + len(start_marker))
-        if end_idx != -1:
-            cleaned_context = context[:start_idx] + context[end_idx + len(end_marker):]
-            logger.info(f"Удалён системный промпт из контекста: {context[start_idx:end_idx + len(end_marker)][:50]}...")
-            return cleaned_context.strip()
-    return context.strip()
-
 # Основной логгер
 logging.basicConfig(
     level=logging.INFO,
@@ -74,6 +49,31 @@ requests.packages.urllib3.disable_warnings()
 
 translator = GoogleTranslator(source='ru', target='en', session=translation_session)
 translator_reverse = GoogleTranslator(source='en', target='ru', session=translation_session)
+
+def clean_system_prompt_markers(text):
+    """Удаляет маркеры системного промпта из текста."""
+    original_text = text
+    cleaned_text = text.replace(SYSTEM_PROMPT_START, "").replace(SYSTEM_PROMPT_END, "")
+    if original_text != cleaned_text:
+        logger.info(f"Удалены маркеры системного промпта: {original_text[:50]}... -> {cleaned_text[:50]}...")
+    return cleaned_text
+
+def add_system_prompt(prompt):
+    """Добавляет системный промпт, окружённый разделителями."""
+    return f"{SYSTEM_PROMPT_START}{prompt}{SYSTEM_PROMPT_END}"
+
+def remove_system_prompt(context):
+    """Удаляет системный промпт, окружённый разделителями, из контекста."""
+    start_marker = SYSTEM_PROMPT_START
+    end_marker = SYSTEM_PROMPT_END
+    start_idx = context.find(start_marker)
+    if start_idx != -1:
+        end_idx = context.find(end_marker, start_idx + len(start_marker))
+        if end_idx != -1:
+            cleaned_context = context[:start_idx] + context[end_idx + len(end_marker):]
+            logger.info(f"Удалён системный промпт из контекста: {context[start_idx:end_idx + len(end_marker)][:50]}...")
+            return cleaned_context.strip()
+    return context.strip()
 
 def temp_message_livetime(config=None):
     """Возвращает время жизни временных сообщений из конфига или значение по умолчанию."""
@@ -137,7 +137,7 @@ def init_db(db_file="context.db"):
         ''')
         logger.info("Создана таблица user_context")
 
-        # Создаём таблицу chat_settings
+        # Создаём таблицу chat_settings с новым полем selected_extension
         cursor.execute(f'''
             CREATE TABLE chat_settings (
                 chat_id INTEGER PRIMARY KEY,
@@ -145,7 +145,8 @@ def init_db(db_file="context.db"):
                 ai_translate_enabled INTEGER NOT NULL DEFAULT 1,
                 memory TEXT DEFAULT '',
                 character_name TEXT DEFAULT '{get_default_character_name()}',
-                user_character_name TEXT DEFAULT 'User'
+                user_character_name TEXT DEFAULT 'User',
+                selected_extension TEXT DEFAULT ''
             )
         ''')
         logger.info("Создана таблица chat_settings")
@@ -182,7 +183,8 @@ def init_db(db_file="context.db"):
             ("ai_translate_enabled", "INTEGER", 0),
             ("memory", "TEXT", 0),
             ("character_name", "TEXT", 0),
-            ("user_character_name", "TEXT", 0)
+            ("user_character_name", "TEXT", 0),
+            ("selected_extension", "TEXT", 0)  # Новое поле
         ],
         "response_times": [
             ("id", "INTEGER", 1),
@@ -220,9 +222,62 @@ def init_db(db_file="context.db"):
 
         logger.info(f"Структура таблицы {table_name} соответствует ожидаемой")
 
-    # Завершение работы с базой данных
     conn.close()
     logger.info(f"База данных готова: {db_file}")
+
+def set_selected_extension(chat_id, extension_name, db_file="context.db"):
+    """Устанавливает выбранное расширение для указанного chat_id."""
+    logger.info(f"Установка selected_extension для chat_id: {chat_id} на '{extension_name}'")
+    conn = sqlite3.connect(db_file)
+    cursor = conn.cursor()
+    cursor.execute('''
+        INSERT OR REPLACE INTO chat_settings (
+            chat_id, user_translate_enabled, ai_translate_enabled, memory, character_name, user_character_name, selected_extension
+        ) VALUES (
+            ?, COALESCE((SELECT user_translate_enabled FROM chat_settings WHERE chat_id = ?), 1),
+            COALESCE((SELECT ai_translate_enabled FROM chat_settings WHERE chat_id = ?), 1),
+            COALESCE((SELECT memory FROM chat_settings WHERE chat_id = ?), ''),
+            COALESCE((SELECT character_name FROM chat_settings WHERE chat_id = ?), ?),
+            COALESCE((SELECT user_character_name FROM chat_settings WHERE chat_id = ?), 'User'),
+            ?
+        )
+    ''', (chat_id, chat_id, chat_id, chat_id, chat_id, get_default_character_name(), chat_id, extension_name))
+    conn.commit()
+    conn.close()
+    logger.info(f"Selected_extension установлено: {extension_name}")
+
+def get_extended_memory(chat_id, config, db_file="context.db"):
+    """Получает память для chat_id с учётом выбранного расширения из конфигурации."""
+    # Получаем память и выбранное расширение
+    memory = get_memory(chat_id, db_file)
+    selected_extension = get_selected_extension(chat_id, db_file)
+    if not memory:
+        memory = get_default_memory()
+        logger.info(f"Memory по умолчанию: {memory[:50]}...")
+    else:
+        logger.info(f"Пользовательский memory: {memory[:50]}...")
+
+    # Если выбрано расширение, добавляем его текст в память
+    if selected_extension:
+        extensions = config.get("extensions", [])
+        extension_data = next((ext for ext in extensions if ext["name"].lower() == selected_extension.lower()), None)
+        if extension_data:
+            memory = f"{memory}\n{extension_data['text']}".strip() if memory else extension_data["text"]
+            logger.info(f"Добавлен текст расширения '{selected_extension}' в память: {memory[:50]}...")
+
+    return memory
+
+def get_selected_extension(chat_id, db_file="context.db"):
+    """Получает выбранное расширение для указанного chat_id."""
+    logger.info(f"Получение selected_extension для chat_id: {chat_id}")
+    conn = sqlite3.connect(db_file)
+    cursor = conn.cursor()
+    cursor.execute('SELECT selected_extension FROM chat_settings WHERE chat_id = ?', (chat_id,))
+    result = cursor.fetchone()
+    conn.close()
+    extension = result[0] if result else ""
+    logger.info(f"Selected_extension: {extension}")
+    return extension
 
 def save_context(chat_id, context, db_file="context.db"):
     """Сохраняет контекст разговора для указанного chat_id."""
@@ -498,11 +553,8 @@ def save_context_to_file(chat_id, config, db_file="context.db"):
     """Сохраняет текущий контекст и memory в временный текстовый файл, исключая системный промпт, и возвращает путь к файлу."""
     logger.info(f"Сохранение контекста в файл для chat_id: {chat_id}")
     
-    # Загружаем memory для данного chat_id
-    memory = get_memory(chat_id, db_file)
-    if not memory:
-        memory = get_default_memory() # Используем значение по умолчанию
-        logger.info(f"Memory не задано, используется значение по умолчанию: {memory[:50]}...")
+    # Получаем память с учётом расширения
+    memory = get_memory(chat_id, config)
     
     # Загружаем контекст
     context = load_context(chat_id, db_file)
@@ -586,14 +638,10 @@ async def generate_response_async(text, config, chat_id, context="", user_transl
         text_en_context = f"\n{formatted_user_character_name}{text_en}\n{character_prompt}"
         logger.info(f"Полный промпт: {prompt[:50]}...")
 
-    memory = get_memory(chat_id)
-    if not memory:
-        memory = get_default_memory()
-        logger.info(f"Memory по умолчанию: {memory[:50]}...")
-    else:
-        logger.info(f"Пользовательский memory: {memory[:50]}...")
+    # Получаем память с учётом расширения
+    memory = get_extended_memory(chat_id, config)
     
-	# Очищаем ответ от маркеров системного промпта
+    # Очищаем ответ от маркеров системного промпта
     prompt = clean_system_prompt_markers(prompt)
     # Формируем payload с динамическим max_length
     payload = {

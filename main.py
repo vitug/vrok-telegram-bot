@@ -13,7 +13,7 @@ from utils import (manage_config, init_db, load_context, save_context, clear_con
                   get_memory, set_memory, generate_response_async, split_message,
                   get_character_name, set_character_name, translate_text, is_english,
                   get_user_character_name, set_user_character_name, get_avg_response_time, temp_message_livetime,
-                  save_context_to_file, add_system_prompt, remove_system_prompt)
+                  save_context_to_file, add_system_prompt, remove_system_prompt, get_selected_extension, set_selected_extension)
 
 # При ошибке SSL: CERTIFICATE_VERIFY_FAILED certificate verify failed: unable to get local issuer certificate (_ssl.c:1129)')
 # pip install pip-system-certs
@@ -122,22 +122,24 @@ async def main():
         @bot.message_handler(commands=['help'])
         async def handle_help(message):
             chat_id = message.chat.id
-            logger.info(f"Получена команда /help от chat_id: {chat_id}")
-            help_text = (
-                "Вот список доступных команд:\n"
-                "/start — Запустить бота и получить приветствие.\n"
-                "/help — Показать это сообщение со списком команд.\n"
-                "/clear — Очистить контекст разговора.\n"
-                "/continue — Продолжить текущую историю без нового ввода.\n"
-                "/usertranslate — Включить/выключить перевод ваших сообщений на английский перед отправкой ИИ.\n"
-                "/aitranslate — Включить/выключить перевод ответов ИИ на русский.\n"
-                "/memory [текст] — Задать или посмотреть memory для ИИ (инструкцию о его поведении).\n"
-                "/character [имя] — Задать или посмотреть имя персонажа (по умолчанию 'Person').\n"
-                "/usercharacter [имя] — Задать или посмотреть имя пользователя (по умолчанию 'User'). Пробел и двоеточие добавляются автоматически.\n"
-                "/getcontext — Получить текущий контекст разговора в виде текстового файла.\n"
-                "Просто текст — Отправить сообщение ИИ, он ответит с учётом текущих настроек.\n"
-                "... — Продолжить историю без явного ввода."
-            )
+            username = message.from_user.username or "Unknown"
+            logger.info(f"Получена команда /help от chat_id: {chat_id}, username: {username}")
+            help_text = """
+        Список команд бота:
+        /help Показывает это сообщение со списком всех доступных команд.
+        /continue Продолжает текущую историю без нового ввода, основываясь на сохранённом контексте.
+        /clear Очищает текущий контекст разговора, позволяя начать общение с чистого листа.
+        /memory [текст] Задаёт или показывает инструкцию (memory) о поведении ИИ. Без аргумента выводит текущее значение. Пример: /memory You are a friendly assistant — задаёт новое поведение.
+        /character [имя] Задаёт или показывает имя персонажа ИИ (по умолчанию "Vrok"). Если перевод включён, имя переводится на английский. Пример: /character Alex — устанавливает имя "Alex".
+        /usercharacter [имя] Задаёт или показывает ваше имя в диалоге (по умолчанию "User"). Добавляет ": " автоматически. Если перевод включён, имя переводится на английский. Пример: /usercharacter Анна — устанавливает "Anna: ".
+        /getcontext Отправляет текущий контекст разговора и memory в виде текстового файла (без системного промпта).
+        /extension [имя] Выбирает дополнение персонажа, влияющее на стиль общения. Без аргумента показывает список доступных дополнений (например, Humor, Wisdom, Sarcasm) и текущее активное. Пример: /extension Humor — активирует режим с юмором и остроумием.
+        /usertranslate Включает или выключает перевод ваших текстовых сообщений на английский перед отправкой ИИ. По умолчанию включён.
+        /aitranslate Включает или выключает перевод ответов ИИ на русский. По умолчанию включён.
+        /start Запускает бота и отправляет приветственное сообщение. Инициализирует контекст разговора с системным промптом.
+        - Голосовые сообщения Отправьте голосовое сообщение, и бот преобразует его в текст с помощью утилиты, покажет распознанный текст, а затем сгенерирует ответ ИИ с учётом текущего дополнения.
+        - Текстовые сообщения Отправьте текст, и бот ответит с учётом контекста, настроек перевода и выбранного дополнения. Используйте "..." для продолжения без ввода.
+            """
             await bot.reply_to(message, help_text)
             logger.info(f"Отправлен текст помощи в chat_id: {chat_id}")
 
@@ -281,6 +283,50 @@ async def main():
                     logger.info(f"Временный файл удалён: {file_path}")
                 except Exception as e:
                     logger.warning(f"Не удалось удалить временный файл {file_path}: {e}")
+
+        @bot.message_handler(commands=['extension'])
+        async def handle_extension(message):
+            chat_id = message.chat.id
+            username = message.from_user.username or "Unknown"
+            logger.info(f"Получена команда /extension от chat_id: {chat_id}, username: {username}")
+
+            # Извлекаем аргумент команды
+            args = message.text.split(maxsplit=1)[1:]  # Пропускаем "/extension"
+            extensions = config.get("extensions", [])
+
+            if not args:
+                # Если аргументов нет, выводим список дополнений
+                if not extensions:
+                    await bot.reply_to(message, "Список дополнений пуст. Добавьте их в config.json.")
+                    return
+                
+                # Формируем список с краткими описаниями
+                extension_list = "\n".join(
+                    [f"- {ext['name']}: {ext.get('short_description', '')}" if ext.get('short_description') 
+                     else f"- {ext['name']}" for ext in extensions]
+                )
+                current_extension = get_selected_extension(chat_id)
+                current_status = f"\n\nТекущее дополнение: {current_extension or 'не выбрано'}"
+                await bot.reply_to(message, f"Доступные дополнения:\n{extension_list}{current_status}\n\nИспользуйте /extension <имя> для выбора.")
+                return
+            
+            # Проверяем, указано ли существующее дополнение
+            extension_name = args[0].strip()
+            selected_extension = next((ext for ext in extensions if ext["name"].lower() == extension_name.lower()), None)
+
+            if not selected_extension:
+                await bot.reply_to(message, f"Дополнение '{extension_name}' не найдено. Используйте /extension для списка доступных.")
+                return
+
+            # Сохраняем выбранное расширение в базу данных
+            current_extension = get_selected_extension(chat_id)
+            if current_extension and current_extension.lower() == selected_extension["name"].lower():
+                await bot.reply_to(message, f"Дополнение '{selected_extension['name']}' уже активно.")
+                return
+
+            set_selected_extension(chat_id, selected_extension["name"])
+            logger.info(f"Выбрано дополнение '{selected_extension['name']}' для chat_id: {chat_id}")
+            await bot.reply_to(message, f"Дополнение '{selected_extension['name']}' активировано.")
 
         @bot.message_handler(commands=['continue'])
         async def handle_continue(message):
