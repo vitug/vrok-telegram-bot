@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# utils.py
 import json
 import logging
 import os
@@ -550,11 +551,10 @@ def get_default_memory():
     return "You are a cheerful AI, always responding with a bit of humor."
 
 def save_context_to_file(chat_id, config, db_file="context.db"):
-    """Сохраняет текущий контекст и memory в временный текстовый файл, исключая системный промпт, и возвращает путь к файлу."""
     logger.info(f"Сохранение контекста в файл для chat_id: {chat_id}")
     
-    # Получаем память с учётом расширения
-    memory = get_memory(chat_id, config)
+    # Исправляем вызов get_memory, передаём db_file вместо config
+    memory = get_memory(chat_id, db_file)
     
     # Загружаем контекст
     context = load_context(chat_id, db_file)
@@ -562,7 +562,7 @@ def save_context_to_file(chat_id, config, db_file="context.db"):
         logger.info("Контекст пуст, возвращаем None")
         return None
     
-    # Удаляем системный промпт из начала контекста, если он там есть
+    # Удаляем системный промпт из начала контекста
     cleaned_context = remove_system_prompt(context)
     if not cleaned_context:
         logger.info("Контекст после удаления системного промпта пуст, возвращаем None")
@@ -570,9 +570,7 @@ def save_context_to_file(chat_id, config, db_file="context.db"):
     
     # Создаём временный файл
     with tempfile.NamedTemporaryFile(delete=False, suffix=".txt", mode="w", encoding="utf-8") as temp_file:
-        # Записываем memory в начало файла
         temp_file.write(f"Memory:\n{memory}\n\n")
-        # Записываем очищенный контекст после memory
         temp_file.write(f"Context:\n{cleaned_context}")
         file_path = temp_file.name
     
@@ -581,12 +579,12 @@ def save_context_to_file(chat_id, config, db_file="context.db"):
 
 def remove_last_word(text):
     """Удаляет последнее слово из текста, если предложение не заканчивается знаком препинания, сохраняя знаки препинания и кавычки."""
-    text = text.strip()  # Убираем лишние пробелы в начале и конце
+    text = text.rstrip()  # Убираем лишние пробелы только в конце
     if not text:  # Если текст пустой, возвращаем его как есть
         return text
     
     # Определяем знаки препинания, которые считаем завершением предложения
-    punctuation_marks = ',.!?;:'
+    punctuation_marks = ',.!?;:)"*'
     # Проверяем, заканчивается ли текст любым знаком препинания
     if any(text.rstrip().endswith(mark) for mark in punctuation_marks):
         logger.debug(f"Текст заканчивается знаком препинания: '{text}', последнее слово не удаляется")
@@ -721,6 +719,9 @@ async def generate_response_async(text, config, chat_id, context="", user_transl
         "ignore_eos": False,
         "rep_pen_slope": 1
     }
+    
+    # Логируем payload в ai_details.log
+    ai_detail_logger.info(f"Запрос к Kobold API для chat_id {chat_id}: {json.dumps(payload, ensure_ascii=False, indent=2)}")
     logger.info(f"Отправка запроса к Kobold API с промптом: {prompt[:50]}...")
 
     # Отправляем запрос к Kobold API через HTTP без шифрования

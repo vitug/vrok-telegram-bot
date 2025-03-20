@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# main.py
 import asyncio
 import json
 import logging
@@ -260,7 +261,7 @@ async def main():
             username = message.from_user.username or "Unknown"
             logger.info(f"Получена команда /getcontext от chat_id: {chat_id}, username: {username}")
             
-            # Получаем путь к файлу с контекстом, передаём config
+            # Передаём config как есть, он нужен для других целей в save_context_to_file
             file_path = save_context_to_file(chat_id, config)
             
             if file_path is None:
@@ -295,27 +296,51 @@ async def main():
             extensions = config.get("extensions", [])
 
             if not args:
-                # Если аргументов нет, выводим список дополнений
-                if not extensions:
-                    await bot.reply_to(message, "Список дополнений пуст. Добавьте их в config.json.")
+                # Если аргументов нет, показываем только несекретные расширения
+                visible_extensions = [ext for ext in extensions if not ext.get("hidden", False)]
+                if not visible_extensions:
+                    await bot.reply_to(message, "Нет видимых дополнений. Используйте /extension xxx для полного списка.")
+                    logger.info(f"Нет видимых дополнений для chat_id: {chat_id}")
                     return
                 
-                # Формируем список с краткими описаниями
+                # Формируем список видимых дополнений
                 extension_list = "\n".join(
                     [f"- {ext['name']}: {ext.get('short_description', '')}" if ext.get('short_description') 
-                     else f"- {ext['name']}" for ext in extensions]
+                     else f"- {ext['name']}" for ext in visible_extensions]
                 )
                 current_extension = get_selected_extension(chat_id)
                 current_status = f"\n\nТекущее дополнение: {current_extension or 'не выбрано'}"
                 await bot.reply_to(message, f"Доступные дополнения:\n{extension_list}{current_status}\n\nИспользуйте /extension <имя> для выбора.")
+                logger.info(f"Показаны видимые дополнения для chat_id: {chat_id}")
+                return
+
+            # Проверяем, является ли аргумент "xxx" или "ххх" (независимо от регистра)
+            arg = args[0].strip().lower()
+            if arg in ["xxx", "ххх"]:
+                # Если аргумент "xxx" или "ххх", показываем все дополнения
+                if not extensions:
+                    await bot.reply_to(message, "Список дополнений пуст. Добавьте их в config.json.")
+                    return
+                
+                # Формируем полный список с указанием скрытых
+                extension_list = "\n".join(
+                    [f"- {ext['name']}: {ext.get('short_description', '')}{' (скрыто)' if ext.get('hidden', False) else ''}" 
+                     if ext.get('short_description') else f"- {ext['name']}{' (скрыто)' if ext.get('hidden', False) else ''}" 
+                     for ext in extensions]
+                )
+                current_extension = get_selected_extension(chat_id)
+                current_status = f"\n\nТекущее дополнение: {current_extension or 'не выбрано'}"
+                await bot.reply_to(message, f"Все доступные дополнения:\n{extension_list}{current_status}\n\nИспользуйте /extension <имя> для выбора.")
+                logger.info(f"Показан полный список дополнений для chat_id: {chat_id}")
                 return
             
-            # Проверяем, указано ли существующее дополнение
-            extension_name = args[0].strip()
+            # Если аргумент не "xxx" и не "ххх", проверяем, указано ли существующее дополнение
+            extension_name = arg
             selected_extension = next((ext for ext in extensions if ext["name"].lower() == extension_name.lower()), None)
 
             if not selected_extension:
-                await bot.reply_to(message, f"Дополнение '{extension_name}' не найдено. Используйте /extension для списка доступных.")
+                await bot.reply_to(message, f"Дополнение '{extension_name}' не найдено. Используйте /extension xxx для полного списка.")
+                logger.info(f"Дополнение '{extension_name}' не найдено для chat_id: {chat_id}")
                 return
 
             # Сохраняем выбранное расширение в базу данных
