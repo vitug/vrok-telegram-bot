@@ -1,13 +1,58 @@
 {
-    "telegram_token": "YOUR_TELEGRAM_BOT_TOKEN",
+    // Токен бота для Telegram
+    "telegram_token": "YOUR_TELEGRAM_BOT_TOKEN_HERE",
+
+    // URL API для генерации текста (KoboldAI или аналогичный сервис)
     "kobold_api_url": "http://127.0.0.1:5001/api/v1/generate",
+
+    // Максимальное количество новых токенов для генерации
     "max_new_tokens": 512,
-    "max_length": 200,
-    "temperature": 0.8,
+
+    // Максимальная длина выходного текста (в токенах)
+    "max_length": 128,
+
+    // Температура генерации (чем выше, тем более случайные ответы)
+    "temperature": 0.77,
+
+    // Top-p (nucleus sampling) для контроля разнообразия текста
     "top_p": 0.9,
-    "proxy": null,
-    "timeout": 300,
-    "system_prompt": "You are Vrok, a humorous AI assistant created by vitug. Respond with wit and a touch of sarcasm.",
-    "log_ai_details": false,
-    "temp_message_lifetime": 30
+
+    // Прокси для подключения (если требуется)
+    "proxy": "socks5://127.0.0.1:8080",
+
+    // Тайм-аут для запросов к API (в секундах)
+    "timeout": 1800,
+
+    // Системный промпт по умолчанию (инструкция для генерации)
+    "system_prompt": "You are an AI, a storytelling master, crafting gripping and vivid stories in the third person, with the main hero as the central figure.\nYour task is to immerse the reader in a captivating world full of lively characters, unexpected plot twists, and rich details.\nEach story must be unique, featuring well-developed characters with distinct traits, motives, and interactions.\nUse vivid language to describe scenes, emotions, and actions so the reader can picture the hero and their surroundings as if they were real.\nNarration is in the third person (\"he/she did,\" \"he/she saw\"), focusing on the main hero’s thoughts, feelings, and reactions.\nCreate a variety of characters (friends, foes, random encounters) with unique traits and goals.\nThe plot must be dynamic, with intrigue, conflict, or mystery to keep the tension alive.\nIncorporate any details the user provides (hero’s name, setting, genre, mood) into the story.\nFeel free to add humor, drama, or epic moments to make the tale vibrant and memorable.\nIf the user provides no specific instructions, invent a story yourself, choosing an engaging genre (fantasy, adventure, mystery, sci-fi, etc.) and a fitting setting.\nStart with action or an intriguing scene to hook the reader immediately.",
+
+    // Логировать ли подробности работы ИИ (true/false)
+    "log_ai_details": true,
+
+    // Время жизни временных сообщений (в секундах)
+    "temp_message_lifetime": 30,
+
+    // Путь к инструменту для преобразования аудио в текст
+    "audio_to_text_tool": "Transcribe.cmd",
+
+    // Список дополнений (extensions)
+    "extensions": [
+        {
+            "name": "Юмор",
+            "text": "The character is inclined towards humor and witty remarks. They enjoy lightening the mood with jokes, often introducing unexpected twists in conversation and gently teasing the interlocutor, always in a good-natured way. Their responses are filled with levity and playfulness, and even in serious situations, they’ll find a way to slip in an appropriate quip.",
+            "short_description": "Добавляет юмор и остроумие в ответы."
+        },
+        {
+            "name": "Мудрость",
+            "text": "The character possesses profound wisdom and offers philosophical advice. They tend to reflect on life, the meaning of events, and human actions, encouraging the interlocutor to view situations from a new, deeper perspective. Their responses often include metaphors, quotes, or lessons from the past, helping to foster inner peace and understanding.",
+            "short_description": "Дает мудрые и философские советы.",
+            "hidden": false
+        },
+        {
+            "name": "Сарказм",
+            "text": "The character employs sarcasm in their responses, adding sharpness and irony to the conversation. They are a master of subtle jabs and biting comments that make the interlocutor pause or smirk, despite the edge. Their sarcasm never crosses into rudeness but serves as a tool to highlight the absurdity of a situation or deliver a reply with a twist.",
+            "short_description": "Использует сарказм и иронию.",
+            "hidden": true
+        }
+    ]
 }

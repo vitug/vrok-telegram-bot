@@ -835,7 +835,7 @@ async def generate_response_async(text, config, chat_id, context="", user_transl
                         full_response = (
                             f"Ответ ИИ (на английском): {display_response_en}\n"
                             f"---\n"
-                            f"Перевод на русский: {response_ru}"
+                            f"Перевод: {response_ru}"
                         )
                     else:
                         if user_translate_enabled:
@@ -843,14 +843,14 @@ async def generate_response_async(text, config, chat_id, context="", user_transl
                                 f"Перевод текста для ИИ на английский: {text_en}\n"
                                 f"Ответ ИИ (на английском): {display_response_en}\n"
                                 f"---\n"
-                                f"Перевод на русский: {response_ru}"
+                                f"Перевод: {response_ru}"
                             )
                         else:
                             full_response = (
                                 f"Текст для ИИ: {text_en}\n"
                                 f"Ответ ИИ (на английском): {display_response_en}\n"
                                 f"---\n"
-                                f"Перевод на русский: {response_ru}"
+                                f"Перевод: {response_ru}"
                             )
                 else:
                     # Определяем префикс в зависимости от языка ответа
