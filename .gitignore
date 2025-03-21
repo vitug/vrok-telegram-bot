@@ -5,3 +5,4 @@ ai_details.log
 __pycache__/
 *.pyc
 *.cmd
+*.bak
