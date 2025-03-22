@@ -83,10 +83,30 @@ def temp_message_livetime(config=None):
     return 30
 
 def is_english(text):
-    """Проверяет, состоит ли текст только из английских символов."""
-    logger.info(f"Проверка текста на английский: {text[:50]}...")
-    return all(ord(char) < 128 for char in text)
+    """Проверяет, является ли текст преимущественно английским."""
+    if not text:  # Проверка на пустой текст
+        logger.info("Текст пустой, считаем его английским по умолчанию")
+        return True
 
+    # Удаляем пробельные символы и проверяем только значимые символы
+    cleaned_text = ''.join(char for char in text if not char.isspace())
+    if not cleaned_text:  # Если после очистки ничего не осталось
+        logger.info("Текст состоит только из пробелов, считаем его английским")
+        return True
+
+    # Проверяем, что большинство символов — латинские буквы, цифры или допустимая пунктуация
+    latin_chars = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,!?\"'-:;()[]{}")
+    total_chars = len(cleaned_text)
+    latin_count = sum(1 for char in cleaned_text if char in latin_chars or char.isspace())
+
+    # Доля латинских символов должна быть выше порога (например, 90%)
+    threshold = 0.9
+    is_english_text = (latin_count / total_chars) >= threshold
+
+    logger.info(f"Проверка текста на английский: {text[:50]}... Это английский - {is_english_text} "
+                f"(латинских символов: {latin_count}/{total_chars}, доля: {latin_count/total_chars:.2f})")
+    return is_english_text
+    
 def clean_text(text):
     """Очищает текст от лишних повторений и нежелательных суффиксов."""
     logger.info(f"Очистка текста: {text[:50]}...")
@@ -138,7 +158,7 @@ def init_db(db_file="context.db"):
         ''')
         logger.info("Создана таблица user_context")
 
-        # Создаём таблицу chat_settings с новым полем selected_extension
+        # Создаём таблицу chat_settings с новым полем show_english
         cursor.execute(f'''
             CREATE TABLE chat_settings (
                 chat_id INTEGER PRIMARY KEY,
@@ -147,7 +167,8 @@ def init_db(db_file="context.db"):
                 memory TEXT DEFAULT '',
                 character_name TEXT DEFAULT '{get_default_character_name()}',
                 user_character_name TEXT DEFAULT 'User',
-                selected_extension TEXT DEFAULT ''
+                selected_extension TEXT DEFAULT '',
+                show_english INTEGER NOT NULL DEFAULT 0
             )
         ''')
         logger.info("Создана таблица chat_settings")
@@ -175,7 +196,7 @@ def init_db(db_file="context.db"):
     # Ожидаемая структура таблиц
     expected_tables = {
         "user_context": [
-            ("chat_id", "INTEGER", 1),  # имя, тип, primary key
+            ("chat_id", "INTEGER", 1),
             ("context", "TEXT", 0)
         ],
         "chat_settings": [
@@ -185,7 +206,8 @@ def init_db(db_file="context.db"):
             ("memory", "TEXT", 0),
             ("character_name", "TEXT", 0),
             ("user_character_name", "TEXT", 0),
-            ("selected_extension", "TEXT", 0)  # Новое поле
+            ("selected_extension", "TEXT", 0),
+            ("show_english", "INTEGER", 0)  # Добавлен новый столбец с запятой перед ним
         ],
         "response_times": [
             ("id", "INTEGER", 1),
@@ -206,7 +228,7 @@ def init_db(db_file="context.db"):
             raise SystemExit(f"Ошибка: таблица {table_name} отсутствует в базе данных. Проверьте структуру базы.")
 
         # Проверяем количество и имена столбцов
-        actual_columns = [(col[1], col[2], 1 if col[5] else 0) for col in columns]  # имя, тип, primary key
+        actual_columns = [(col[1], col[2], 1 if col[5] else 0) for col in columns]
         if len(actual_columns) != len(expected_columns):
             logger.error(f"Несоответствие структуры таблицы {table_name}: ожидалось {len(expected_columns)} столбцов, найдено {len(actual_columns)}")
             conn.close()
@@ -225,7 +247,7 @@ def init_db(db_file="context.db"):
 
     conn.close()
     logger.info(f"База данных готова: {db_file}")
-
+    
 def set_selected_extension(chat_id, extension_name, db_file="context.db"):
     """Устанавливает выбранное расширение для указанного chat_id."""
     logger.info(f"Установка selected_extension для chat_id: {chat_id} на '{extension_name}'")
@@ -422,6 +444,41 @@ def get_user_character_name(chat_id, db_file="context.db"):
     name = result[0] if result else "User"
     logger.info(f"User character name: {name}")
     return name
+
+def get_show_english(chat_id, db_file="context.db"):
+    """Получает настройку отображения английского текста для пользователя."""
+    logger.info(f"Получение show_english для chat_id: {chat_id}")
+    conn = sqlite3.connect(db_file)
+    cursor = conn.cursor()
+    cursor.execute('SELECT show_english FROM chat_settings WHERE chat_id = ?', (chat_id,))
+    result = cursor.fetchone()
+    conn.close()
+    enabled = result[0] if result is not None else config.get("show_english_default", False)
+    logger.info(f"Show english: {enabled}")
+    return enabled
+
+def set_show_english(chat_id, enabled, db_file="context.db"):
+    """Устанавливает настройку отображения английского текста для пользователя."""
+    logger.info(f"Установка show_english для chat_id: {chat_id} на {enabled}")
+    conn = sqlite3.connect(db_file)
+    cursor = conn.cursor()
+    cursor.execute('''
+        INSERT OR REPLACE INTO chat_settings (
+            chat_id, user_translate_enabled, ai_translate_enabled, memory, 
+            character_name, user_character_name, selected_extension, show_english
+        ) VALUES (
+            ?, COALESCE((SELECT user_translate_enabled FROM chat_settings WHERE chat_id = ?), 1),
+            COALESCE((SELECT ai_translate_enabled FROM chat_settings WHERE chat_id = ?), 1),
+            COALESCE((SELECT memory FROM chat_settings WHERE chat_id = ?), ""),
+            COALESCE((SELECT character_name FROM chat_settings WHERE chat_id = ?), ?),
+            COALESCE((SELECT user_character_name FROM chat_settings WHERE chat_id = ?), "User"),
+            COALESCE((SELECT selected_extension FROM chat_settings WHERE chat_id = ?), ""),
+            ?
+        )
+    ''', (chat_id, chat_id, chat_id, chat_id, chat_id, get_default_character_name(), chat_id, chat_id, 1 if enabled else 0))
+    conn.commit()
+    conn.close()
+    logger.info("Настройка show_english сохранена")
 
 # Новые функции для работы со статистикой времени генерации
 def save_response_time(chat_id, response_time, db_file="context.db"):
@@ -827,43 +884,62 @@ async def generate_response_async(text, config, chat_id, context="", user_transl
                 # Убираем character_prompt из текста для вывода пользователю
                 display_response_en = combined_response_en.replace(character_prompt, "")
                 logger.info(f"Ответ для вывода пользователю: {display_response_en[:50]}...")
-
+                
                 # Формируем окончательный ответ с учётом настроек перевода
-                if ai_translate_enabled and is_english(display_response_en):
+                show_english = get_show_english(chat_id)
+                is_english_response = is_english(display_response_en)
+                if ai_translate_enabled and is_english_response:
+                    logger.info(f"Перевод ответа ИИ включен:{ai_translate_enabled} Это английский ответ:{is_english_response}")
                     response_ru = translate_text(display_response_en, to_english=False)
-                    if continue_only or text_en == "...":
-                        full_response = (
-                            f"Ответ ИИ (на английском): {display_response_en}\n"
-                            f"---\n"
-                            f"Перевод: {response_ru}"
-                        )
-                    else:
-                        if user_translate_enabled:
+                    if continue_only or text_en == "..." or text_en == "***":
+                        logger.info("Это продолжение текста")
+                        if show_english:
                             full_response = (
-                                f"Перевод текста для ИИ на английский: {text_en}\n"
-                                f"Ответ ИИ (на английском): {display_response_en}\n"
-                                f"---\n"
                                 f"Перевод: {response_ru}"
+                                f"---\n"
+                                f"Ответ ИИ (на английском): {display_response_en}\n"
                             )
                         else:
-                            full_response = (
-                                f"Текст для ИИ: {text_en}\n"
-                                f"Ответ ИИ (на английском): {display_response_en}\n"
-                                f"---\n"
-                                f"Перевод: {response_ru}"
-                            )
+                            full_response = response_ru
+                    else:
+                        if user_translate_enabled:
+                            logger.info("Перевод запроса включен")
+                            if show_english:
+                                full_response = (
+                                    f"Перевод текста для ИИ на английский: {text_en}\n"
+                                    f"Перевод: {response_ru}"
+                                    f"---\n"
+                                    f"Ответ ИИ (на английском): {display_response_en}\n"
+                                )
+                            else:
+                                full_response = response_ru
+                        else:
+                            logger.info("Перевод запроса выключен")
+                            if show_english:
+                                full_response = (
+                                    f"Текст для ИИ: {text_en}\n"
+                                    f"Перевод: {response_ru}"
+                                    f"---\n"
+                                    f"Ответ ИИ (на английском): {display_response_en}\n"
+                                )
+                            else:
+                                full_response = response_ru
                 else:
+                    logger.info(f"Перевод ответа ИИ включен:{ai_translate_enabled} Это английский ответ:{is_english_response}")
                     # Определяем префикс в зависимости от языка ответа
-                    response_prefix = "Ответ ИИ (на английском):" if is_english(display_response_en) else "Ответ ИИ:"
+                    response_prefix = "Ответ ИИ (на английском):" if is_english_response else "Ответ ИИ:"
                     
-                    if continue_only or text_en == "...":
+                    if continue_only or text_en == "..." or text_en == "***":
                         full_response = f"{response_prefix} {display_response_en}"
                     else:
                         if user_translate_enabled:
-                            full_response = (
-                                f"Перевод текста для ИИ на английский: {text_en}\n"
-                                f"{response_prefix} {display_response_en}"
-                            )
+                            if show_english:
+                                full_response = (
+                                    f"Перевод текста для ИИ на английский: {text_en}\n"
+                                    f"{response_prefix} {display_response_en}"
+                                )
+                            else:
+                                full_response = f"{response_prefix} {display_response_en}"
                         else:
                             full_response = (
                                 f"Текст для ИИ: {text_en}\n"
@@ -871,6 +947,7 @@ async def generate_response_async(text, config, chat_id, context="", user_transl
                             )
                             
                 logger.info(f"Итоговый ответ: {full_response[:50]}...")
+
 
                 # Завершаем замер времени и сохраняем его
                 end_time = time.time()

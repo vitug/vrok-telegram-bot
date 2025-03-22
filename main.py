@@ -14,7 +14,8 @@ from utils import (manage_config, init_db, load_context, save_context, clear_con
                   get_memory, set_memory, generate_response_async, split_message,
                   get_character_name, set_character_name, translate_text, is_english,
                   get_user_character_name, set_user_character_name, get_avg_response_time, temp_message_livetime,
-                  save_context_to_file, add_system_prompt, remove_system_prompt, get_selected_extension, set_selected_extension)
+                  save_context_to_file, add_system_prompt, remove_system_prompt, get_selected_extension, set_selected_extension,
+                  get_show_english, set_show_english)
 
 # При ошибке SSL: CERTIFICATE_VERIFY_FAILED certificate verify failed: unable to get local issuer certificate (_ssl.c:1129)')
 # pip install pip-system-certs
@@ -137,6 +138,7 @@ async def main():
         /extension [имя] Выбирает дополнение персонажа, влияющее на стиль общения. Без аргумента показывает список доступных дополнений (например, Humor, Wisdom, Sarcasm) и текущее активное. Пример: /extension Humor — активирует режим с юмором и остроумием.
         /usertranslate Включает или выключает перевод ваших текстовых сообщений на английский перед отправкой ИИ. По умолчанию включён.
         /aitranslate Включает или выключает перевод ответов ИИ на русский. По умолчанию включён.
+        /showenglish Включает/выключает отображение английского текста (переведённого текста и ответа ИИ до перевода).
         /start Запускает бота и отправляет приветственное сообщение. Инициализирует контекст разговора с системным промптом.
         - Голосовые сообщения Отправьте голосовое сообщение, и бот преобразует его в текст с помощью утилиты, покажет распознанный текст, а затем сгенерирует ответ ИИ с учётом текущего дополнения.
         - Текстовые сообщения Отправьте текст, и бот ответит с учётом контекста, настроек перевода и выбранного дополнения. Используйте "..." для продолжения без ввода.
@@ -352,7 +354,19 @@ async def main():
             set_selected_extension(chat_id, selected_extension["name"])
             logger.info(f"Выбрано дополнение '{selected_extension['name']}' для chat_id: {chat_id}")
             await bot.reply_to(message, f"Дополнение '{selected_extension['name']}' активировано.")
-
+            
+        @bot.message_handler(commands=['showenglish'])
+        async def handle_show_english(message):
+            chat_id = message.chat.id
+            username = message.from_user.username or "Unknown"
+            logger.info(f"Получена команда /showenglish от chat_id: {chat_id}, username: {username}")
+            current_state = get_show_english(chat_id)
+            new_state = not current_state
+            set_show_english(chat_id, new_state)
+            state_text = "включено" if new_state else "выключено"
+            await bot.reply_to(message, f"Отображение английского текста теперь {state_text}.")
+            logger.info(f"Show_english для chat_id: {chat_id} установлен в {new_state}")
+    
         @bot.message_handler(commands=['continue'])
         async def handle_continue(message):
             chat_id = message.chat.id
