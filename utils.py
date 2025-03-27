@@ -445,7 +445,7 @@ def get_user_character_name(chat_id, db_file="context.db"):
     logger.info(f"User character name: {name}")
     return name
 
-def get_show_english(chat_id, db_file="context.db"):
+def get_show_english(chat_id, config, db_file="context.db"):
     """Получает настройку отображения английского текста для пользователя."""
     logger.info(f"Получение show_english для chat_id: {chat_id}")
     conn = sqlite3.connect(db_file)
@@ -886,7 +886,7 @@ async def generate_response_async(text, config, chat_id, context="", user_transl
                 logger.info(f"Ответ для вывода пользователю: {display_response_en[:50]}...")
                 
                 # Формируем окончательный ответ с учётом настроек перевода
-                show_english = get_show_english(chat_id)
+                show_english = get_show_english(chat_id, config)
                 is_english_response = is_english(display_response_en)
                 if ai_translate_enabled and is_english_response:
                     logger.info(f"Перевод ответа ИИ включен:{ai_translate_enabled} Это английский ответ:{is_english_response}")
